@@ -1,9 +1,8 @@
 import glob,os
 import argparse
 import pandas as pd
-import utils.data_utils as du
-import utils.visualization_utils as vu
-
+from ..utils import data_utils as du
+from ..utils import visualization_utils as vu
 
 def plot_lcs(df_real, df_fake,dump_dir):
     """Plot real and fake light-curves
@@ -20,7 +19,7 @@ if __name__ == '__main__':
     parser.add_argument("--raw_dir", type=str, default='../DES/data/',
                         help="Directory with raw data")
 
-    parser.add_argument("--dump_dir", type=str, default='./dump_visualize/',
+    parser.add_argument("--dump_dir", type=str, default='./dump_visualize_nocuts/',
                         help="Directory for output data")
 
     parser.add_argument("--debug", action="store_true", 

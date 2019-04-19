@@ -6,10 +6,10 @@ import pandas as pd
 from tqdm import tqdm
 import multiprocessing
 from pathlib import Path
+import utils.logging_utils as lu
 from functools import partial
 import matplotlib.pyplot as plt
 from astropy.table import Table
-import utils.logging_utils as lu
 from matplotlib import pyplot as plt
 from concurrent.futures import ProcessPoolExecutor
 
@@ -30,12 +30,19 @@ def load_data(raw_dir, dump_dir,redo_photometry = True, debug=False):
 
     if redo_photometry:
         df_tmp = process_photometry(raw_dir, dump_dir, debug=debug)
-        df = pd.concat([df_tmp[i][0] for i in range(len(df_tmp))])
+        if len(df_tmp)<=5:
+            try:
+                df = pd.concat([df_tmp[i][0] for i in range(len(df_tmp))])
+            except Exception:
+                df = pd.concat([df_tmp[i] for i in range(len(df_tmp))])
+        else:
+            df = df_tmp
     else:
+        list_pickle = glob.glob(f"{dump_dir}/*.pickle")
+        df_tmp = {}
         for i,fil in enumerate(list_pickle):
-            lu.print_green(f"Loading preprocessed data {dump_dir}/preprocessed")
+            lu.print_green(f"Loading preprocessed data {fil}")
             if debug: print(fil)
-            df_tmp = {}
             df_tmp[i] = pd.read_pickle(fil)
         df = pd.concat([df_tmp[i] for i in range(len(df_tmp))])
 
@@ -62,17 +69,7 @@ def process_singlefile_photometry(fname, dump_dir,keep_delim=False):
     # Load the companion HEAD file
     header = Table.read(fname.replace("PHOT", "HEAD"), format="fits")
     df_header = header.to_pandas()
-    keep_col_header = [
-        "SNID",
-        "PEAKMJD",
-        "HOSTGAL_PHOTOZ",
-        "HOSTGAL_PHOTOZ_ERR",
-        "HOSTGAL_SPECZ",
-        "HOSTGAL_SPECZ_ERR",
-        "SNTYPE",
-    ]
-    keep_col_header = keep_col_header + \
-        [k for k in df_header.keys() if 'mjd' in k or 'fake' in k]
+    keep_col_header = [k for k in df_header.keys()]
     keep_col_header = list(set(keep_col_header))
     df_header = df_header[keep_col_header].copy()
     df_header["SNID"] = df_header["SNID"].astype(np.int32)
@@ -84,7 +81,6 @@ def process_singlefile_photometry(fname, dump_dir,keep_delim=False):
     # New light curves are identified by MJD == -777.0
     arr_idx = np.where(df["MJD"].values == -777.0)[0]
     arr_idx = np.hstack((np.array([0]), arr_idx, np.array([len(df)])))
-    # import ipdb; ipdb.set_trace()
     # Fill in arr_ID
     for counter in range(1, len(arr_idx)):
         start, end = arr_idx[counter - 1], arr_idx[counter]
@@ -104,7 +100,7 @@ def process_singlefile_photometry(fname, dump_dir,keep_delim=False):
         # Reset the index (it is no longer continuous after dropping lines)
         df.reset_index(inplace=True, drop=True)
     outname = f"{str(Path(fname).stem)}.pickle"
-    df.to_pickle(f"{dump_dir}/preprocessed/{outname}")
+    df.to_pickle(f"{dump_dir}/{outname}")
 
     return df
 
@@ -112,7 +108,7 @@ def process_singlefile_photometry(fname, dump_dir,keep_delim=False):
 def process_photometry(raw_dir, dump_dir, debug=False, keep_delim=False):
     """Preprocess the FITS data
 
-    - Use multiprocessing/threading to speed up data processing
+    - multiprocessing ahs fail, to be added later
     - Preprocess every FIT file in thi file list
 
     Args:
@@ -123,41 +119,16 @@ def process_photometry(raw_dir, dump_dir, debug=False, keep_delim=False):
 
     """
     Path(dump_dir).mkdir(parents=True, exist_ok=True)
-    preprocessed_dir = f"{dump_dir}/preprocessed"
-    Path(preprocessed_dir).mkdir(parents=True, exist_ok=True)
 
     lu.print_green(f"Processing data FITS {raw_dir}")
     list_files = glob.glob(os.path.join(f"{raw_dir}", "*PHOT.FITS"))
 
     df ={}
 
-    if not debug and len(list_files) > 1:
-        # Parameters of multiprocessing below
-        parallel_fn = partial(process_singlefile_photometry, dump_dir=dump_dir,
-                               keep_delim=keep_delim)
-        max_workers = multiprocessing.cpu_count()
-
-        # Split list files in fake chunks
-        # to get a progress bar and alleviate memory constraints
-        num_elem = len(list_files)
-        num_chunks = len(list_files)
-        list_chunks = np.array_split(np.arange(num_elem), num_chunks)
-
-        # Loop over chunks of files
-        df_list = []
-
-        for i, chunk_idx in enumerate(tqdm(list_chunks, desc="Process photometry", ncols=100)):
-            # Process each file in the chunk in parallel
-            with ProcessPoolExecutor(max_workers=max_workers) as executor:
-                start, end = chunk_idx[0], chunk_idx[-1] + 1
-                # Need to cast to list because executor returns an iterator
-                df[i] = list(executor.map(parallel_fn,
-                                             list_files[start:end]))
-
-    else:
-        if debug: lu.print_yellow(f"Debug mode: single file {list_files[-1]}")
-        df[0] = process_singlefile_photometry(
-            list_files[-1], dump_dir, keep_delim=keep_delim)
+    for i,fil in enumerate(list_files):
+        print(fil)
+        df[i] = process_singlefile_photometry(
+            fil, dump_dir, keep_delim=keep_delim)
 
     return df
 

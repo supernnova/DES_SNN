@@ -37,47 +37,49 @@ def inspect_peak(df_real,df_fake,dump_dir,debug=False):
     plt.savefig(f"{path_plots}/hist_fake_peak.png")
     del fig
 
-def plot_single_lc(df,sid,ax):
+def plot_single_lc(df,sid,ax,plot_peak=True):
 
     SN = df[df['SNID']==sid]
     for flt in df['FLT'].unique():
         SN_flt= SN[SN['FLT']==flt]
-        min_time=SN_flt['MJD'].min()
-        plt.errorbar(SN_flt['MJD'],SN_flt['FLUXCAL'],yerr=SN_flt['FLUXCALERR'].values,label=flt,fmt='o')
-        plt.tick_params(axis='both', which='major', labelsize=8)
-        plt.xlabel('MJD')
-        plt.ylabel('FLUXCAL')
-        ax.set_ylim(SN_flt['FLUXCAL'].min(), SN_flt['FLUXCAL'].max())
-    # just in case peak predictions are off
-    if SN["PEAKMJD"].iloc[0] + 5 > SN['MJD'].min():
-        ax.plot(
-                [SN["PEAKMJD"].iloc[0], SN["PEAKMJD"].iloc[0] ], [plt.ylim()[0], plt.ylim()[1]], color="grey", linestyle="--"
-            )
-    if SN['PRIVATE(DES_mjd_trigger)'].iloc[0]+ 5> SN['MJD'].min():
-        ax.plot(
-                [SN['PRIVATE(DES_mjd_trigger)'].iloc[0], SN['PRIVATE(DES_mjd_trigger)'].iloc[0] ], [plt.ylim()[0], plt.ylim()[1]], color="orange", linestyle="--"
-            )
-    try:
-        z = str(round(SN['PRIVATE(DES_fake_z)'].iloc[0],1))
+        if len(SN_flt)>1:
+            min_time=SN_flt['MJD'].min()
+            plt.errorbar(SN_flt['MJD'],SN_flt['FLUXCAL'],yerr=SN_flt['FLUXCALERR'].values,label=flt,fmt='o')
+            plt.tick_params(axis='both', which='major', labelsize=8)
+            plt.xlabel('MJD')
+            plt.ylabel('FLUXCAL')
+            ax.set_ylim(SN_flt['FLUXCAL'].min(), SN_flt['FLUXCAL'].max())
+    if plot_peak:
+        # just in case peak predictions are off
+        if SN["PEAKMJD"].iloc[0] + 5 > SN['MJD'].min():
+            ax.plot(
+                    [SN["PEAKMJD"].iloc[0], SN["PEAKMJD"].iloc[0] ], [plt.ylim()[0], plt.ylim()[1]], color="grey", linestyle="--"
+                )
+        if SN['PRIVATE(DES_mjd_trigger)'].iloc[0]+ 5> SN['MJD'].min():
+            ax.plot(
+                    [SN['PRIVATE(DES_mjd_trigger)'].iloc[0], SN['PRIVATE(DES_mjd_trigger)'].iloc[0] ], [plt.ylim()[0], plt.ylim()[1]], color="orange", linestyle="--"
+                )
         ax.plot(
                 [SN['PRIVATE(DES_fake_peakmjd)'].iloc[0], SN['PRIVATE(DES_fake_peakmjd)'].iloc[0] ], [plt.ylim()[0], plt.ylim()[1]], color="black", linestyle="--"
             )
+    try:
+        z = str(round(SN['PRIVATE(DES_fake_z)'].iloc[0],1))
+        
     except Exception:
         z = "None"
     ax.set_title(f"ID:{sid}, z:{z}")
 
     return ax
 
-def plot_random_lcs(df,path_plots, multiplots=False):
+def plot_random_lcs(df,path_plots, multiplots=False, nb_lcs = 20):
     lu.print_green("Plot light-curves")
     # clean directory
     if Path(path_plots).exists():
         shutil.rmtree(path_plots)
     os.makedirs(path_plots,exist_ok=True)
     #randoms Ias
-    sample_size = 20
     list_SNIDs = [
-        df.iloc[i]['SNID'] for i in sorted(random.sample(range(len(df)), sample_size))
+        df.iloc[i]['SNID'] for i in sorted(random.sample(range(len(df)), nb_lcs))
     ]
     if multiplots:
         fig = plt.figure()
