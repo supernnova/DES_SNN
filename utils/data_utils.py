@@ -6,55 +6,63 @@ import pandas as pd
 from tqdm import tqdm
 import multiprocessing
 from pathlib import Path
-import utils.logging_utils as lu
 from functools import partial
 import matplotlib.pyplot as plt
 from astropy.table import Table
-from matplotlib import pyplot as plt
+import utils.logging_utils as lu
 from concurrent.futures import ProcessPoolExecutor
 
-
-def load_data(raw_dir, dump_dir,redo_photometry = True, debug=False):
-    """load and preprocess real and fake data
+def load_all_data(raw_dir, dump_dir, redo_photometry = True, debug=False, keep_delim=False, preprocess_only=False):
+    """load real and fake data
+    preprocess data if needed, else fetch from pickle
 
     Arguments:
         raw_dir {str} -- path to raw data PHOT and HEAD .FITS
         dump_dir {str} -- dump directory
 
     Keyword Arguments:
+        redo_photometry {bool} -- optional, preprocess
         debug {bool} -- optional, load only one file
+        keep_delim {bool} -- optional, keep -777 for phot splits
 
     Returns:
         PandasDataFrame -- df with real or fake data
     """
 
     if redo_photometry:
-        df_tmp = process_photometry(raw_dir, dump_dir, debug=debug)
-        if len(df_tmp)<=5:
-            try:
-                df = pd.concat([df_tmp[i][0] for i in range(len(df_tmp))])
-            except Exception:
-                df = pd.concat([df_tmp[i] for i in range(len(df_tmp))])
-        else:
-            df = df_tmp
+        lu.print_green(f"Processing data FITS {raw_dir}")
+        list_files = glob.glob(os.path.join(f"{raw_dir}", "*PHOT.FITS"))
+        if debug:
+            list_files=list_files[0:1]
+        Path(dump_dir).mkdir(parents=True, exist_ok=True)
+
+        df_tmp ={}
+        for i,fil in enumerate(list_files):
+            print(fil)
+            df_tmp[i] = preprocess_single_fits(fil, dump_dir,keep_delim=keep_delim)
     else:
+        lu.print_green(f"Loading preprocessed data {dump_dir} ")
         list_pickle = glob.glob(f"{dump_dir}/*.pickle")
         df_tmp = {}
         for i,fil in enumerate(list_pickle):
-            lu.print_green(f"Loading preprocessed data {fil}")
-            if debug: print(fil)
             df_tmp[i] = pd.read_pickle(fil)
-        df = pd.concat([df_tmp[i] for i in range(len(df_tmp))])
 
-    return df
+    if not preprocess_only:
+        df = pd.concat([df_tmp[i] for i in range(len(df_tmp))],sort=False)
+        return df
 
-def process_singlefile_photometry(fname, dump_dir,keep_delim=False):
+
+def preprocess_single_fits(fname, dump_dir,keep_delim=False):
     """Load photometry and preprocess
 
     Load PHOT and HEAD.FITS, preprocess them, merge and return DataFrame
+    preprocessing: join photometry and header and eliminate separators
+    dump to pickle
 
     Arguments:
         fname {[str]} -- filename of the PHOT.FITS file
+        dump_dir [str] -- path to dump pickled product
+        keep_delim [optional, Boolean] -- if photo delimiters are kept
 
     Returns:
         [pandas.DataFrame] -- photometry with header df
@@ -65,6 +73,8 @@ def process_singlefile_photometry(fname, dump_dir,keep_delim=False):
 
     if df.MJD.values[-1] == -777.0:
         df = df.drop(df.index[-1])
+    if df.MJD.values[0] == -777.0:
+        df = df.drop(df.index[0])
 
     # Load the companion HEAD file
     header = Table.read(fname.replace("PHOT", "HEAD"), format="fits")
@@ -72,7 +82,11 @@ def process_singlefile_photometry(fname, dump_dir,keep_delim=False):
     keep_col_header = [k for k in df_header.keys()]
     keep_col_header = list(set(keep_col_header))
     df_header = df_header[keep_col_header].copy()
-    df_header["SNID"] = df_header["SNID"].astype(np.int32)
+    try:
+        # BEWARE! SNID for fakes is actually NOT the real SNID
+        df_header['SNID']= df_header['PRIVATE(DES_snid)'].astype(np.int32)
+    except Exception:
+        df_header["SNID"] = df_header["SNID"].astype(np.int32)
 
     #############################################
     # Compute SNID for df and join with df_header
@@ -105,33 +119,6 @@ def process_singlefile_photometry(fname, dump_dir,keep_delim=False):
     return df
 
 
-def process_photometry(raw_dir, dump_dir, debug=False, keep_delim=False):
-    """Preprocess the FITS data
-
-    - multiprocessing ahs fail, to be added later
-    - Preprocess every FIT file in thi file list
-
-    Args:
-        list_files (list): list of photometry files to process
-
-    Returns:
-        df (dictionary of Pandas.DataFrames)
-
-    """
-    Path(dump_dir).mkdir(parents=True, exist_ok=True)
-
-    lu.print_green(f"Processing data FITS {raw_dir}")
-    list_files = glob.glob(os.path.join(f"{raw_dir}", "*PHOT.FITS"))
-
-    df ={}
-
-    for i,fil in enumerate(list_files):
-        print(fil)
-        df[i] = process_singlefile_photometry(
-            fil, dump_dir, keep_delim=keep_delim)
-
-    return df
-
 def save_fits(df,fname):
     """Save ata frame in fits table
 
@@ -142,4 +129,44 @@ def save_fits(df,fname):
 
     outtable = Table.from_pandas(df)
     Path(fname).parent.mkdir(parents=True, exist_ok=True)
-    outtable.write(fname, format='fits')
+    outtable.write(fname, format='fits', overwrite=True)
+
+def save_phot_fits(df,fname):
+    """
+        fname {str} -- outname, including path
+    """
+    keep_col_phot = ["MJD", "FLUXCAL", "FLUXCALERR", "FLT"]
+    df_phot = df[keep_col_phot]
+    df_phot = df_phot.loc[df_phot["FLUXCAL"].shift() != df_phot["FLUXCAL"]]
+
+    if df_phot.MJD.values[-1] == -777.0:
+        df_phot = df_phot.drop(df_phot.index[-1])
+    if df_phot.MJD.values[0] == -777.0:
+        df_phot = df_phot.drop(df_phot.index[0])
+
+    save_fits(df_phot, fname)
+
+def save_head_fits(df,fname):
+    """
+    """
+    # header
+    keep_col_head = [
+        "SNID",
+        "PEAKMJD",
+        "HOSTGAL_PHOTOZ",
+        "HOSTGAL_PHOTOZ_ERR",
+        "HOSTGAL_SPECZ",
+        "HOSTGAL_SPECZ_ERR",
+        "SNTYPE",
+    ]
+    keep_col_head = keep_col_head + \
+        [k for k in df.keys() if 'mjd' in k or 'fake' in k or "PRIVATE(DES_transient_status)" in k]
+
+    df_head = df[df.MJD != -777.000]
+    df_head = df_head[keep_col_head]
+    df_head = df_head.drop_duplicates()
+    df_head = df_head.reset_index()
+    df_head = df_head[keep_col_head]
+    save_fits(df_head, fname)
+
+
