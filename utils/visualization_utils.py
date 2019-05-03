@@ -68,9 +68,14 @@ def plot_single_lc(df, sid, ax, plot_peak=True, no_title=False):
             ax.plot(
                 [SN['PRIVATE(DES_mjd_trigger)'].iloc[0], SN['PRIVATE(DES_mjd_trigger)'].iloc[0]], [plt.ylim()[0], plt.ylim()[1]], color="orange", linestyle="--", label="trigger"
             )
-        ax.plot(
-            [SN['PRIVATE(DES_fake_peakmjd)'].iloc[0], SN['PRIVATE(DES_fake_peakmjd)'].iloc[0]], [plt.ylim()[0], plt.ylim()[1]], color="black", linestyle="--", label="sim"
-        )
+        if 'PRIVATE(DES_fake_peakmjd)' in SN.keys():
+            ax.plot(
+                [SN['PRIVATE(DES_fake_peakmjd)'].iloc[0], SN['PRIVATE(DES_fake_peakmjd)'].iloc[0]], [plt.ylim()[0], plt.ylim()[1]], color="black", linestyle="--", label="sim"
+            )
+        if 'PKMJDINI' in SN.keys():
+            ax.plot(
+                [SN['PKMJDINI'].iloc[0], SN['PKMJDINI'].iloc[0]], [plt.ylim()[0], plt.ylim()[1]], color="black", linestyle="..", label="bazin"
+            )
         plt.legend()
     try:
         z = str(round(SN['PRIVATE(DES_fake_z)'].iloc[0], 1))

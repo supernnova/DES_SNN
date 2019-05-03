@@ -7,13 +7,13 @@ from tqdm import tqdm
 import multiprocessing
 from pathlib import Path
 from functools import partial
-import matplotlib.pyplot as plt
 from astropy.table import Table
 import utils.logging_utils as lu
 from concurrent.futures import ProcessPoolExecutor
 
-def load_all_data(raw_dir, dump_dir, redo_photometry = True, debug=False, keep_delim=False, preprocess_only=False):
-    """load real and fake data
+
+def load_all_data(raw_dir, dump_dir, redo_photometry=True, debug=False, keep_delim=False, preprocess_only=False):
+    """load data
     preprocess data if needed, else fetch from pickle
 
     Arguments:
@@ -31,31 +31,60 @@ def load_all_data(raw_dir, dump_dir, redo_photometry = True, debug=False, keep_d
 
     if redo_photometry:
         lu.print_green(f"Processing data FITS {raw_dir}")
-        list_files = glob.glob(os.path.join(f"{raw_dir}", "*PHOT.FITS"))
-        if debug:
-            list_files=list_files[0:1]
-        Path(dump_dir).mkdir(parents=True, exist_ok=True)
 
-        df_tmp ={}
-        for i,fil in enumerate(list_files):
+        Path(dump_dir).mkdir(parents=True, exist_ok=True)
+        list_files = glob.glob(os.path.join(f"{raw_dir}", "*PHOT.FITS"))
+
+        # fetch bazin file
+        bazin_file = f"{Path(list_files[0]).parent}/DESALL_fake_Bazin_fit.SNANA.TEXT" if "fake" in list_files[0] else f"{Path(list_files[0]).parent}/DESALL_real_Bazin_fit.SNANA.TEXT"
+        if Path(bazin_file).exists():
+            df_bazin = load_bazin_fits(bazin_file)
+        else:
+            df_bazin = None
+            lu.print_yellow("No Bazin fits available!", bazin_file)
+
+        if debug:
+            lu.print_yellow('Debugging mode')
+            list_files = list_files[0:1]
+        df_tmp = {}
+        for i, fil in enumerate(list_files):
             print(fil)
-            df_tmp[i] = preprocess_single_fits(fil, dump_dir,keep_delim=keep_delim)
+            df_tmp[i] = preprocess_single_fits(
+                fil, dump_dir=dump_dir, keep_delim=keep_delim, df_bazin=df_bazin)
+        # else:
+        #     # partial is bugging
+        #     # use partial to speed up
+        #     max_workers = multiprocessing.cpu_count()
+        #     process_fn = partial(
+        #         preprocess_single_fits,
+        #         dump_dir=dump_dir, keep_delim=keep_delim, df_bazin=df_bazin
+        #     )
+        #     list_df = []
+        #     with ProcessPoolExecutor(max_workers=max_workers) as executor:
+        #         print(list(executor.map(process_fn, list_files)))
+        #         # list_df += list(executor.map(process_fn, list_files))
+        #     import ipdb
+        #     ipdb.set_trace()
+        #     df = pd.concat(list_df)
+        #     return df
+
     else:
         lu.print_green(f"Loading preprocessed data {dump_dir} ")
         list_pickle = glob.glob(f"{dump_dir}/*.pickle")
         df_tmp = {}
-        for i,fil in enumerate(list_pickle):
+        for i, fil in enumerate(list_pickle):
             df_tmp[i] = pd.read_pickle(fil)
 
     if not preprocess_only:
-        df = pd.concat([df_tmp[i] for i in range(len(df_tmp))],sort=False)
+        df = pd.concat([df_tmp[i] for i in range(len(df_tmp))], sort=False)
         return df
 
 
-def preprocess_single_fits(fname, dump_dir,keep_delim=False):
+def preprocess_single_fits(fname, dump_dir=None, keep_delim=False, df_bazin=pd.DataFrame()):
     """Load photometry and preprocess
 
-    Load PHOT and HEAD.FITS, preprocess them, merge and return DataFrame
+    Load PHOT and HEAD.FITS, and Bazin fits
+    preprocess them, merge and return DataFrame
     preprocessing: join photometry and header and eliminate separators
     dump to pickle
 
@@ -84,9 +113,16 @@ def preprocess_single_fits(fname, dump_dir,keep_delim=False):
     df_header = df_header[keep_col_header].copy()
     try:
         # BEWARE! SNID for fakes is actually NOT the real SNID
-        df_header['SNID']= df_header['PRIVATE(DES_snid)'].astype(np.int32)
+        df_header['real_SNID'] = df_header['PRIVATE(DES_snid)'].astype(
+            np.int32)
+        df_header["SNID"] = df_header["SNID"].astype(np.int32)
     except Exception:
         df_header["SNID"] = df_header["SNID"].astype(np.int32)
+
+    # Bazin fits
+    if len(df_bazin) > 1:
+        lu.print_green("Adding Bazin features")
+        df_header = pd.merge(df_header, df_bazin, on="SNID", how="left")
 
     #############################################
     # Compute SNID for df and join with df_header
@@ -103,9 +139,9 @@ def preprocess_single_fits(fname, dump_dir,keep_delim=False):
     df["SNID"] = arr_ID
     df = df.set_index("SNID")
 
-    df_header = df_header.set_index("SNID")
-    # join df and header
-    df = df.join(df_header).reset_index()
+    df = pd.merge(df, df_header, on="SNID", how="left")
+
+    lu.print_green("merged")
     # filters have a trailing white space which we remove
     df.FLT = df.FLT.apply(lambda x: x.rstrip()).values.astype(str)
     # Drop the delimiter lines
@@ -116,11 +152,12 @@ def preprocess_single_fits(fname, dump_dir,keep_delim=False):
     outname = f"{str(Path(fname).stem)}.pickle"
     df.to_pickle(f"{dump_dir}/{outname}")
 
+
     return df
 
 
-def save_fits(df,fname):
-    """Save ata frame in fits table
+def save_fits(df, fname):
+    """Save data frame in fits table
 
     Arguments:
         df {pandas.DataFrame} -- data to save
@@ -131,7 +168,8 @@ def save_fits(df,fname):
     Path(fname).parent.mkdir(parents=True, exist_ok=True)
     outtable.write(fname, format='fits', overwrite=True)
 
-def save_phot_fits(df,fname):
+
+def save_phot_fits(df, fname):
     """
         fname {str} -- outname, including path
     """
@@ -146,7 +184,8 @@ def save_phot_fits(df,fname):
 
     save_fits(df_phot, fname)
 
-def save_head_fits(df,fname):
+
+def save_head_fits(df, fname):
     """
     """
     # header
@@ -170,3 +209,9 @@ def save_head_fits(df,fname):
     save_fits(df_head, fname)
 
 
+def load_bazin_fits(bazin_file):
+    fit = pd.read_csv(bazin_file, comment="#",
+                      delimiter=" ", skipinitialspace=True)
+    fit["SNID"] = fit["CID"].astype(int)
+
+    return fit
