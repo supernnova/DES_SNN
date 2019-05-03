@@ -9,40 +9,9 @@ from shutil import copyfile
 from functools import partial
 import utils.cuts_utils as cu
 import utils.data_utils as du
+from astropy.table import Table
 import utils.logging_utils as lu
 from utils import visualization_utils as vu
-
-
-def preprocess_real_and_fake_lcs(path_raw, path_dump, debug=False):
-    """ preprocess data (join head, phot, bazin fits)
-    """
-    for dtype in ["fake", "real"]:
-        du.load_all_data(f"{path_raw}/DESALL_forcePhoto_{dtype}_snana_fits/", f"{path_dump}/{dtype}/", redo_photometry=True, debug=debug, keep_delim=True, preprocess_only=True)
-
-def do_skimming(fname, time_cut='window', SN_threshold=None):
-    """ Skim data to reduce lcs
-    """
-    df = pd.read_pickle(fname)
-    # hack to keep the separators
-    mask = (df['MJD'] != -777.00)
-
-    # applying cuts
-    df = cu.compute_time_cut(
-        df, mask, time_cut)
-    df = cu.compute_S_N_cut(df, mask, SN_threshold)
-    df = cu.apply_cuts(df)
-
-    # output
-    prefix_out = Path(fname).name.split("_")[0]
-    # save photometry
-    fname = f"{skim_dir}/{dtype}/{prefix_out}_skimmed_{dtype}_PHOT.FITS"
-    du.save_phot_fits(df, fname)
-    # save header
-    fname = f"{skim_dir}/{dtype}/{prefix_out}_skimmed_{dtype}_HEAD.FITS"
-    du.save_head_fits(df, fname)
-
-    # plot some light-curves
-    vu.plot_random_lcs(df, f"{skim_dir}/{dtype}/lightcurves/", multiplots=False, nb_lcs=20)
 
 
 def do_classification(skim_dir):
@@ -94,52 +63,48 @@ def do_classification(skim_dir):
         early_prediction.make_early_prediction(model_settings, nb_lcs=20)
 
 
-if __name__ == '__main__':
 
-    # settings
-    debug = True
-    prep = True
-    skim = True
-    time_cut = 'bazin'  # ['trigger','bazin','subseason']
-    SN_threshold = None  # [None,3]
+# settings
+debug = True
+prep = True
+skim = True
+time_cut = 'bazin'  # ['trigger','bazin','subseason']
+SN_threshold = None  # [None,3]
 
-    # init paths
-    path_des_data = os.environ.get("DES_DATA")
-    prep_dir = './dumps/preprocessed/'
-    skim_dir = f"./dumps/{time_cut}_SN{SN_threshold}/"
+# init paths
+path_des_data = os.environ.get("DES_DATA")
+dump_dir = "./dumps/tests/"
 
-    if prep:
-        preprocess_real_and_fake_lcs(path_des_data, prep_dir, debug=debug)
+for dtype in ["fake","real"]:
+	raw_dir = f"{path_des_data}/DESALL_forcePhoto_{dtype}_snana_fits/"
+	list_files = glob.glob(os.path.join(f"{raw_dir}", "*PHOT.FITS"))
+	# load Bazin
+	bazin_file = f"{Path(list_files[0]).parent}/DESALL_{dtype}_Bazin_fit.SNANA.TEXT"
+	if Path(bazin_file).exists():
+	    df_bazin = du.load_bazin_fits(bazin_file)
 
-    if skim:
-        for dtype in ["fake", "real"]:
-            lu.print_green(f"___ skiming {dtype} ___")
+	for fname in list_files:
+		prefix_out = Path(fname).name.split("_")[0]
+		dump_prefix = f"{dtype}/{prefix_out}"
 
-            list_files = glob.glob(f"{prep_dir}/{dtype}/*.pickle")
-            if debug:
-                list_files = list_files[:2]
-            for fname in list_files:
-                do_skimming(fname, time_cut=time_cut, SN_threshold=SN_threshold)
-            # PARTIAL is bugging!
-            #     max_workers = multiprocessing.cpu_count()
-            #     process_fn = partial(
-            #         do_skimming,
-            #         time_cut=time_cut, SN_threshold=SN_threshold
-            #     )
-            #     list_df = []
-            #     with ProcessPoolExecutor(max_workers=max_workers) as executor:
-            #         list_df += list(executor.map(process_fn, list_files))
-            #     import ipdb; ipdb.set_trace()
+		df_header, df_phot = du.read_fits(fname)
 
-            lu.print_green(f"Skimmed files {dtype}")
+		# skimming
+		time_cut_type = 'window'
+		SN_threshold = None
+		# trigger window
+		timevar = 'trigger'
+		cu.apply_cut_save(df_header,df_phot, time_cut_type = time_cut_type, timevar = timevar, SN_threshold= SN_threshold, dump_dir=dump_dir,dump_prefix = dump_prefix)
+		do_classification(f"{dump_dir}/{time_cut_type}_{timevar}_SN{SN_threshold}")
 
-    # SuperNNova
-    do_classification(skim_dir)
+		# bazin window
+		timevar = 'bazin'
+		df_header = pd.merge(df_header,df_bazin,on='SNID')
+		cu.apply_cut_save(df_header,df_phot, time_cut_type = time_cut_type, timevar = timevar, SN_threshold= SN_threshold, dump_dir=dump_dir,dump_prefix = dump_prefix)
+		do_classification(f"{dump_dir}/{time_cut_type}_{timevar}_SN{SN_threshold}")
 
-    """
-    To do:
-    - plot lcs classified as Ia in real
-    - get efficiency for fakes
-    - crosscheck qith spec classified SNe in real
+		# if file exists do no duplicate
+		# get efficiency class
+		# crosscheck spec real
 
-    """
+		# BEWARE classification at is , will create a db for each year. WIll ahve to group this !!!
