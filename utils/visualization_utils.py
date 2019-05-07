@@ -138,9 +138,8 @@ def hist_delta_var(df_header, time_cut_type,timevar,dump_dir,dump_prefix,cut_ver
     os.makedirs(path_plots, exist_ok=True)
     to_plot = df_header[timevar_to_cut]-df_header["PRIVATE(DES_fake_peakmjd)"]
     to_plot = to_plot[abs(to_plot)<100]
-    lu.print_green(f"Plot histo delta {timevar}")
     fig = plt.figure()
-    plt.hist(to_plot, histtype="step",label=f"mean {rpunt(to_plot.mean(),1)}")
+    plt.hist(to_plot, histtype="step",label=f"mean {round(to_plot.mean(),1)}")
     plt.plot(
               [to_plot.mean(),to_plot.mean()], [plt.ylim()[0], plt.ylim()[1]], color="black", linestyle="--", label="mean"
             )

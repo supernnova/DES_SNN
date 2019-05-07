@@ -36,11 +36,12 @@ def do_classification(skim_dir):
         snn_args.fits_dir = "./"
         if dtype == "fake":
             snn_args.sntypes = OrderedDict({"0": "Ia"})
+        else:
+            snn_args.sntypes = OrderedDict({"101": "Ia","0":"unknown","80":"AGN"})
         snn_args.model_files = [
             "../SuperNNova_general/trained_models_mutant/vanilla_S_0_CLF_2_R_None_photometry_DF_1.0_N_global_lstm_32x2_0.05_128_True_mean_C/vanilla_S_0_CLF_2_R_None_photometry_DF_1.0_N_global_lstm_32x2_0.05_128_True_mean_C.pt"]
         settings = conf.get_settings(snn_args)
 
-        import ipdb; ipdb.set_trace()
         # make dataset
         make_dataset.make_dataset(settings)
 
@@ -85,6 +86,7 @@ for dtype in ["fake","real"]:
     for fname in list_files:
         prefix_out = Path(fname).name.split("_")[0]
         dump_prefix = f"{dtype}/{prefix_out}"
+        lu.print_blue(f"Processing: {dump_prefix}")
 
         df_header, df_phot = du.read_fits(fname)
 
@@ -97,18 +99,19 @@ for dtype in ["fake","real"]:
         # bazin window
         timevar = 'bazin'
         df_header = pd.merge(df_header,df_bazin,on='SNID')
-
+        df_header = df_header[[k for k in df_header.keys() if 'Unnamed' not in k]]
         cu.apply_cut_save(df_header,df_phot, time_cut_type = time_cut_type, timevar = timevar, SN_threshold= SN_threshold, dump_dir=dump_dir,dump_prefix = dump_prefix)
 
-    time_cut_type = 'window'
-    SN_threshold = None
-    timevar = 'trigger'
-    do_classification(f"{dump_dir}/{time_cut_type}_{timevar}_SN{SN_threshold}")
-    timevar = 'bazin'
-    do_classification(f"{dump_dir}/{time_cut_type}_{timevar}_SN{SN_threshold}")
+# do SNN classifications
+time_cut_type = 'window'
+SN_threshold = None
+timevar = 'trigger'
+do_classification(f"{dump_dir}/{time_cut_type}_{timevar}_SN{SN_threshold}")
+timevar = 'bazin'
+do_classification(f"{dump_dir}/{time_cut_type}_{timevar}_SN{SN_threshold}")
 
-    # if file exists do no duplicate
-    # get efficiency class
-    # crosscheck spec real
+# if file exists do no duplicate
+# get efficiency class
+# crosscheck spec real
 
-        # BEWARE classification at is , will create a db for each year. WIll ahve to group this !!!
+    # BEWARE classification at is , will create a db for each year. WIll ahve to group this !!!
