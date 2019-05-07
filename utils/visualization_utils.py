@@ -5,6 +5,7 @@ import shutil
 import numpy as np
 import pandas as pd
 from pathlib import Path
+from sklearn import metrics
 import utils.data_utils as du
 import matplotlib.pyplot as plt
 from astropy.table import Table
@@ -86,14 +87,17 @@ def plot_single_lc(df, sid, ax, plot_peak=True, no_title=False):
         mag = "None"
 
     if z == "None":
-        z = str(round(SN['HOSTGAL_SPECZ'].iloc[0], 1))
+        try:
+            z = str(round(SN['HOSTGAL_SPECZ'].iloc[0], 1))
+        except Exception:
+            a =0
     if not no_title:
         ax.set_title(f"ID:{sid}, z:{z}, mag:{mag}")
 
     return ax
 
 
-def plot_random_lcs(df, path_plots, multiplots=False, nb_lcs=20):
+def plot_random_lcs(df, path_plots, multiplots=False, nb_lcs=20,plot_peak=True):
     lu.print_green("Plot light-curves")
     # clean directory
     if Path(path_plots).exists():
@@ -112,7 +116,7 @@ def plot_random_lcs(df, path_plots, multiplots=False, nb_lcs=20):
         else:
             fig, ax = plt.subplots()
         # plot function
-        ax = plot_single_lc(df, sid, ax)
+        ax = plot_single_lc(df, sid, ax,plot_peak=plot_peak)
         if not multiplots:
             # Tight layout often produces nice results
             fig.tight_layout()
@@ -149,3 +153,4 @@ def hist_delta_var(df_header, time_cut_type,timevar,dump_dir,dump_prefix,cut_ver
     plt.xlabel(f"{timevar_to_cut}-fake_peak")
     plt.legend()
     plt.savefig(f"{path_plots}/{Path(dump_prefix).name}_hist_delta_var.png")
+

@@ -38,6 +38,15 @@ def read_fits(fname):
 
     return df_header, df_phot
 
+def fetch_header_info(path):
+    list_head = glob.glob(f"{path}/*HEAD.FITS")
+    list_df_head = []
+    for fname in list_head:
+        dat = Table.read(fname, format='fits')
+        list_df_head.append(dat.to_pandas())
+    df_head = pd.concat(list_df_head)
+    return df_head
+
 
 def save_fits(df, fname):
     """Save data frame in fits table

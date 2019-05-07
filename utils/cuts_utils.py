@@ -53,8 +53,14 @@ def apply_cut_save(df_header,df_phot, time_cut_type = None, timevar = None ,SN_t
     else: timevar_to_cut= None
 
     df_header, df_phot = compute_time_cut(df_header,df_phot, time_cut_type = time_cut_type, timevar_to_cut = timevar_to_cut)
+    df_header, df_phot = compute_S_N_cut(df_header,df_phot, SN_threshold=None)
 
-    compute_S_N_cut(df_header,df_phot, SN_threshold=None)
+    # format sntypes as sim
+    if 'fake' in dump_prefix:
+        df_header["SNTYPE"] = df_header["SNTYPE"].apply(lambda x: 101 if x==0 else 120)
+    else:
+        # need to add spec
+        df_header["SNTYPE"] = df_header["SNTYPE"].apply(lambda x: 101 if x==1 else 120)
 
     cut_version = f"{time_cut_type}_{timevar}_SN{SN_threshold}"
     du.save_phot_fits(df_phot,f'{dump_dir}/{cut_version}/{dump_prefix}_PHOT.FITS')
@@ -63,4 +69,7 @@ def apply_cut_save(df_header,df_phot, time_cut_type = None, timevar = None ,SN_t
     # if fake do histogram with delta_t
     if "PRIVATE(DES_fake_peakmjd)" in df_header.keys():
         vu.hist_delta_var(df_header, time_cut_type,timevar,dump_dir,dump_prefix,cut_version)
+    #plot lcs for control
+    path_plots = f'{dump_dir}/{cut_version}/{Path(dump_prefix).parent}/skimmed_lightcurves/'
+    vu.plot_random_lcs(df_phot, path_plots, multiplots=False, nb_lcs=20,plot_peak=False)
 
