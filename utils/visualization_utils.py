@@ -125,3 +125,28 @@ def plot_random_lcs(df, path_plots, multiplots=False, nb_lcs=20):
         plt.savefig(f"{path_plots}lc_{sid}.png")
 
     del fig
+
+def hist_delta_var(df_header, time_cut_type,timevar,dump_dir,dump_prefix,cut_version):
+
+    if timevar=='trigger': 
+        timevar_to_cut='PRIVATE(DES_mjd_trigger)'
+    elif timevar=='bazin': 
+        timevar_to_cut='PKMJDINI'
+    else: timevar_to_cut= None
+
+    path_plots= f"{dump_dir}/{cut_version}/{Path(dump_prefix).parent}/figures/"
+    os.makedirs(path_plots, exist_ok=True)
+    to_plot = df_header[timevar_to_cut]-df_header["PRIVATE(DES_fake_peakmjd)"]
+    to_plot = to_plot[abs(to_plot)<100]
+    lu.print_green(f"Plot histo delta {timevar}")
+    fig = plt.figure()
+    plt.hist(to_plot, histtype="step",label=f"mean {rpunt(to_plot.mean(),1)}")
+    plt.plot(
+              [to_plot.mean(),to_plot.mean()], [plt.ylim()[0], plt.ylim()[1]], color="black", linestyle="--", label="mean"
+            )
+    plt.plot(
+              [to_plot.std(),to_plot.std()], [plt.ylim()[0], plt.ylim()[1]], color="grey", linestyle="--", label="std"
+            )
+    plt.xlabel(f"{timevar_to_cut}-fake_peak")
+    plt.legend()
+    plt.savefig(f"{path_plots}/{Path(dump_prefix).name}_hist_delta_var.png")

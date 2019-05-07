@@ -7,6 +7,7 @@ import pandas as pd
 from pathlib import Path
 import utils.data_utils as du
 import utils.logging_utils as lu
+import utils.visualization_utils as vu
 
 def compute_time_cut(df_header,df_phot, time_cut_type = None, timevar_to_cut = None):
     # Time cut
@@ -55,6 +56,11 @@ def apply_cut_save(df_header,df_phot, time_cut_type = None, timevar = None ,SN_t
 
     compute_S_N_cut(df_header,df_phot, SN_threshold=None)
 
-    du.save_phot_fits(df_phot,f'{dump_dir}/{time_cut_type}_{timevar}_SN{SN_threshold}/{dump_prefix}_PHOT.FITS')
-    du.save_fits(df_header,f'{dump_dir}/{time_cut_type}_{timevar}_SN{SN_threshold}/{dump_prefix}_HEAD.FITS')
+    cut_version = f"{time_cut_type}_{timevar}_SN{SN_threshold}"
+    du.save_phot_fits(df_phot,f'{dump_dir}/{cut_version}/{dump_prefix}_PHOT.FITS')
+    du.save_fits(df_header,f'{dump_dir}/{cut_version}/{dump_prefix}_HEAD.FITS')
+
+    # if fake do histogram with delta_t
+    if "PRIVATE(DES_fake_peakmjd)" in df_header.keys():
+        vu.hist_delta_var(df_header, time_cut_type,timevar,dump_dir,dump_prefix,cut_version)
 
