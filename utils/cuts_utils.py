@@ -57,10 +57,10 @@ def apply_cut_save(df_header,df_phot, time_cut_type = None, timevar = None ,SN_t
 
     # format sntypes as sim
     if 'fake' in dump_prefix:
-        df_header["SNTYPE"] = df_header["SNTYPE"].apply(lambda x: 101 if x==0 else 120)
+        df_header["SNTYPE"] = df_header["SNTYPE"].apply(lambda x: 1 if x==0 else 0)
     else:
         # need to add spec
-        df_header["SNTYPE"] = df_header["SNTYPE"].apply(lambda x: 101 if x==1 else 120)
+        df_header["SNTYPE"] = df_header["SNTYPE"].apply(lambda x: 1 if x==1 else 0)
 
     cut_version = f"{time_cut_type}_{timevar}_SN{SN_threshold}"
     du.save_phot_fits(df_phot,f'{dump_dir}/{cut_version}/{dump_prefix}_PHOT.FITS')
