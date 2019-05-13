@@ -61,21 +61,21 @@ def plot_single_lc(df, sid, ax, plot_peak=True, no_title=False):
             ax.set_ylim(SN_flt['FLUXCAL'].min(), SN_flt['FLUXCAL'].max())
     if plot_peak:
         # just in case peak predictions are off
-        if SN["PEAKMJD"].iloc[0] + 5 > SN['MJD'].min():
-            ax.plot(
-                [SN["PEAKMJD"].iloc[0], SN["PEAKMJD"].iloc[0]], [plt.ylim()[0], plt.ylim()[1]], color="grey", linestyle="--", label="PSNID peak"
-            )
-        if SN['PRIVATE(DES_mjd_trigger)'].iloc[0] + 5 > SN['MJD'].min():
-            ax.plot(
-                [SN['PRIVATE(DES_mjd_trigger)'].iloc[0], SN['PRIVATE(DES_mjd_trigger)'].iloc[0]], [plt.ylim()[0], plt.ylim()[1]], color="orange", linestyle="--", label="trigger"
-            )
-        if 'PRIVATE(DES_fake_peakmjd)' in SN.keys():
-            ax.plot(
-                [SN['PRIVATE(DES_fake_peakmjd)'].iloc[0], SN['PRIVATE(DES_fake_peakmjd)'].iloc[0]], [plt.ylim()[0], plt.ylim()[1]], color="black", linestyle="--", label="sim"
-            )
+        # if SN["PEAKMJD"].iloc[0] + 5 > SN['MJD'].min():
+        #     ax.plot(
+        #         [SN["PEAKMJD"].iloc[0], SN["PEAKMJD"].iloc[0]], [plt.ylim()[0], plt.ylim()[1]], color="grey", linestyle="--", label="PSNID peak"
+        #     )
+        # if SN['PRIVATE(DES_mjd_trigger)'].iloc[0] + 5 > SN['MJD'].min():
+        #     ax.plot(
+        #         [SN['PRIVATE(DES_mjd_trigger)'].iloc[0], SN['PRIVATE(DES_mjd_trigger)'].iloc[0]], [plt.ylim()[0], plt.ylim()[1]], color="orange", linestyle="--", label="trigger"
+        #     )
+        # if 'PRIVATE(DES_fake_peakmjd)' in SN.keys():
+        #     ax.plot(
+        #         [SN['PRIVATE(DES_fake_peakmjd)'].iloc[0], SN['PRIVATE(DES_fake_peakmjd)'].iloc[0]], [plt.ylim()[0], plt.ylim()[1]], color="black", linestyle="--", label="sim"
+        #     )
         if 'PKMJDINI' in SN.keys():
             ax.plot(
-                [SN['PKMJDINI'].iloc[0], SN['PKMJDINI'].iloc[0]], [plt.ylim()[0], plt.ylim()[1]], color="black", linestyle="..", label="bazin"
+                [SN['PKMJDINI'].iloc[0], SN['PKMJDINI'].iloc[0]], [plt.ylim()[0], plt.ylim()[1]], color="blue", linestyle="--", label="bazin"
             )
         plt.legend()
     try:

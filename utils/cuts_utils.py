@@ -46,12 +46,15 @@ def compute_S_N_cut(df_header,df_phot, SN_threshold=None):
     return df_header,df_phot
 
 def apply_cut_save(df_header,df_phot, time_cut_type = None, timevar = None ,SN_threshold=None, dump_dir=None,dump_prefix = None):
+    # init
     if timevar=='trigger': 
         timevar_to_cut='PRIVATE(DES_mjd_trigger)'
     elif timevar=='bazin': 
         timevar_to_cut='PKMJDINI'
     else: timevar_to_cut= None
+    cut_version = f"{time_cut_type}_{timevar}_SN{SN_threshold}"
 
+    # apply cuts
     df_header, df_phot = compute_time_cut(df_header,df_phot, time_cut_type = time_cut_type, timevar_to_cut = timevar_to_cut)
     df_header, df_phot = compute_S_N_cut(df_header,df_phot, SN_threshold=None)
 
@@ -62,9 +65,14 @@ def apply_cut_save(df_header,df_phot, time_cut_type = None, timevar = None ,SN_t
         # need to add spec
         df_header["SNTYPE"] = df_header["SNTYPE"].apply(lambda x: 1 if x==1 else 0)
 
-    cut_version = f"{time_cut_type}_{timevar}_SN{SN_threshold}"
-    du.save_phot_fits(df_phot,f'{dump_dir}/{cut_version}/{dump_prefix}_PHOT.FITS')
-    du.save_fits(df_header,f'{dump_dir}/{cut_version}/{dump_prefix}_HEAD.FITS')
+    # save
+    df_phot_saved = du.save_phot_fits(df_phot,f'{dump_dir}/{cut_version}/{dump_prefix}_PHOT.FITS')
+    df_phot_saved = df_phot_saved[df_phot_saved['SNID']!=0]
+    #in order to keep same ordering
+    df_phot_for_header = df_phot_saved.loc[df_phot_saved["SNID"].shift() != df_phot_saved["SNID"]]
+    df_phot_for_header = df_phot_for_header.reset_index()
+    df_header_tosave = df_phot_for_header[['SNID']].merge(df_header,on='SNID')
+    du.save_fits(df_header_tosave,f'{dump_dir}/{cut_version}/{dump_prefix}_HEAD.FITS')
 
     # if fake do histogram with delta_t
     if "PRIVATE(DES_fake_peakmjd)" in df_header.keys():
@@ -72,4 +80,6 @@ def apply_cut_save(df_header,df_phot, time_cut_type = None, timevar = None ,SN_t
     #plot lcs for control
     path_plots = f'{dump_dir}/{cut_version}/{Path(dump_prefix).parent}/skimmed_lightcurves/'
     vu.plot_random_lcs(df_phot, path_plots, multiplots=False, nb_lcs=20,plot_peak=False)
+
+
 

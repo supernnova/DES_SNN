@@ -9,11 +9,21 @@ from pathlib import Path
 from astropy.table import Table
 import utils.logging_utils as lu
 
+
+def spec_type_decoder(typ):
+    try:
+        spec_sample_type_dic = {"1": "Ia", "0": "unknown", "2": "SNIax", "3": "SNIa-pec", "20": "SNIIP", "21": "SNIIL", "22": "SNIIn", "29": "SNII",
+                            "32": "SNIb", "33": "SNIc", "39": "SNIbc", "41": "SLSN-I", "42": "SLSN-II", "43": "SLSN-R", "80": "AGN", "81": "galaxy","98": "None", "99": "pending"}
+        tag = spec_sample_type_dic[str(typ)]
+    except Exception:
+        tag = f"{typ}"
+    return tag
+
 def read_fits(fname):
     # load photometry
     dat = Table.read(fname, format='fits')
     df_phot = dat.to_pandas()
-    # dailsafe
+    # failsafe
     if df_phot.MJD.values[-1] == -777.0:
         df_phot = df_phot.drop(df_phot.index[-1])
     if df_phot.MJD.values[0] == -777.0:
@@ -38,13 +48,14 @@ def read_fits(fname):
 
     return df_header, df_phot
 
+
 def fetch_header_info(path):
     list_head = glob.glob(f"{path}/*HEAD.FITS")
     list_df_head = []
     for fname in list_head:
         dat = Table.read(fname, format='fits')
         list_df_head.append(dat.to_pandas())
-    df_head = pd.concat(list_df_head)
+    df_head = pd.concat(list_df_head,sort=True)
     return df_head
 
 
@@ -55,7 +66,7 @@ def save_fits(df, fname):
         df {pandas.DataFrame} -- data to save
         fname {str} -- outname, must end in .FITS
     """
-
+    df = df.reset_index()
     outtable = Table.from_pandas(df)
     Path(fname).parent.mkdir(parents=True, exist_ok=True)
     outtable.write(fname, format='fits', overwrite=True)
@@ -66,7 +77,8 @@ def save_phot_fits(df, fname):
         fname {str} -- outname, including path
     """
     keep_col_phot = ["MJD", "FLUXCAL", "FLUXCALERR", "FLT"]
-    df_phot = df[keep_col_phot]
+    # eliminate repeated rows (-777.0)
+    df_phot = df.copy()
     df_phot = df_phot.loc[df_phot["FLUXCAL"].shift() != df_phot["FLUXCAL"]]
 
     if df_phot.MJD.values[-1] == -777.0:
@@ -74,7 +86,13 @@ def save_phot_fits(df, fname):
     if df_phot.MJD.values[0] == -777.0:
         df_phot = df_phot.drop(df_phot.index[0])
 
-    save_fits(df_phot, fname)
+    mask_seven = df_phot['MJD']==-777.0
+    df_phot.loc[mask_seven,'SNID'] = 0
+
+    df_phot = df_phot.reset_index()
+    df_phot_saved = df_phot[keep_col_phot]
+    save_fits(df_phot_saved, fname)
+    return df_phot
 
 
 def load_bazin_fits(bazin_file):

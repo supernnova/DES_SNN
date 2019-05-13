@@ -2,7 +2,6 @@ import os
 import glob
 import datetime
 import argparse
-import numpy as np
 import pandas as pd
 from pathlib import Path
 from shutil import copyfile
@@ -46,22 +45,22 @@ def do_classification(skim_dir,model_files,sntypes):
     # # make dataset
     make_dataset.make_dataset(settings)
 
-    # # classify
-    snn_args.validate_rnn = True
+    # # # classify
+    # snn_args.validate_rnn = True
     model_settings = conf.get_settings_from_dump(
         settings,
         snn_args.model_files[0],
         override_source_data=settings.override_source_data,
     )
-    # # fetch predictions
+    # fetch predictions
     prediction_file = validate_rnn.get_predictions(
         model_settings, model_file=snn_args.model_files[0]
     )
-    # # Compute metrics
+    # Compute metrics
     metrics.get_metrics_singlemodel(
         model_settings, prediction_file=prediction_file, model_type="rnn"
     )
-    # # plot lcs
+    # plot lcs
     model_settings.model_files = snn_args.model_files
     early_prediction.make_early_prediction(model_settings, nb_lcs=20)
 
@@ -70,44 +69,10 @@ def do_classification(skim_dir,model_files,sntypes):
 
     # plots init
     path_plot = f"{snn_args.dump_dir}/figures/"
-    eu.plot_efficiency(df,skim_dir,path_plot)            
-    
+    eu.plot_efficiency(df,skim_dir,path_plot)
 
-def performance_metrics(df, sample_target=0):
-    """Get performance metrics
-    AUC: only valid for binomial classification, input proba of highest label class.
-
-    Args:
-        df (pandas.DataFrame) (str): with columns [target, predicted_target, class1]
-        (optional) sample_target (str): for SNIa sample default is target 0
-
-    Returns:
-        accuracy, auc, purity, efficiency,truepositivefraction
-    """
-    from sklearn import metrics
-    n_targets = len(np.unique(df["target"]))
-
-    # Accuracy & AUC
-    accuracy = metrics.accuracy_score(df["target"], df["predicted_target"])
-    accuracy = round(accuracy * 100, 2)
-    if n_targets == 2:  # valid for biclass only
-        auc = round(metrics.roc_auc_score(df["target"], df["class1"]), 4)
-    else:
-        auc = 0.0
-
-    SNe_Ia = df[df["target"] == sample_target]
-    SNe_CC = df[df["target"] != sample_target]
-    TP = len(SNe_Ia[SNe_Ia["predicted_target"] == sample_target])
-    FP = len(SNe_CC[SNe_CC["predicted_target"] == sample_target])
-
-    P = len(SNe_Ia)
-    N = len(SNe_CC)
-
-    truepositivefraction = P / (P + N)
-    purity = round(100 * TP / (TP + FP), 2) if (TP + FP) > 0 else 0
-    efficiency = round(100.0 * TP / P, 2) if P > 0 else 0
-
-    return accuracy, auc, purity, efficiency, truepositivefraction
+    # "the classified sample"
+    eu.pair_plots(df, path_plot)     
 
 def skim_data(raw_dir,dtype,dump_dir):
 
@@ -123,6 +88,9 @@ def skim_data(raw_dir,dtype,dump_dir):
             lu.print_blue(f"Processing: {dump_prefix}")
 
             df_header, df_phot = du.read_fits(fname)
+            df_header = pd.merge(df_header, df_bazin, on='SNID')
+            df_header = df_header[[
+                k for k in df_header.keys() if 'Unnamed' not in k]]
 
             # skimming
             time_cut_type = 'window'
@@ -135,9 +103,6 @@ def skim_data(raw_dir,dtype,dump_dir):
             time_cut_type = 'window'
             timevar = 'bazin'
             SN_threshold = None
-            df_header = pd.merge(df_header, df_bazin, on='SNID')
-            df_header = df_header[[
-                k for k in df_header.keys() if 'Unnamed' not in k]]
             cu.apply_cut_save(df_header, df_phot, time_cut_type=time_cut_type, timevar=timevar,
                               SN_threshold=SN_threshold, dump_dir=dump_dir, dump_prefix=dump_prefix)
             # with S/N
@@ -173,13 +138,10 @@ classify = True
 path_des_data = os.environ.get("DES_DATA")
 dump_dir = "./dumps/"
 
-for dtype in ["fake", "real"]:
+for dtype in  ["fake","real"]:
     if skim:
         raw_dir = f"{path_des_data}/DESALL_forcePhoto_{dtype}_snana_fits/"
         skim_data(raw_dir,dtype,dump_dir)
 
     if classify:
         classify_data(dump_dir,dtype)
-
-# if file exists do no duplicate
-# crosscheck spec real
