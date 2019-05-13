@@ -1,0 +1,20 @@
+#Obtaining Bazin fit for DES data and fakes
+
+  &SNLCINP
+
+     ! For SNN-integration:
+     OPT_SETPKMJD = 21
+     SNTABLE_LIST = 'SNANA(text:csv)'
+     TEXTFILE_PREFIX = 'fit_testY1'
+
+     ! data
+     PRIVATE_DATA_PATH = '$DES_ROOT/lcmerge'
+     !VERSION_PHOTOMETRY = 'DESALL_forcePhoto_real_snana_fits'
+     VERSION_PHOTOMETRY = 'DESY1_forcePhoto_real_snana_fits'
+     ! limit the IDs so it can run
+     CUTWIN_CID = 1247000, 1247500
+
+
+     PHOTFLAG_MSKREJ   = 1016 !PHOTFLAG eliminat epoch that has errors, not LC 
+
+  &END
