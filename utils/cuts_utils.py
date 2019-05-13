@@ -56,6 +56,7 @@ def apply_cut_save(df_header, df_phot, time_cut_type=None, timevar=None, SN_thre
         timevar_to_cut = 'PKMJDINI'
     else:
         timevar_to_cut = None
+
     cut_version = f"{time_cut_type}_{timevar}_SN{SN_threshold}"
 
     # apply cuts
@@ -64,7 +65,7 @@ def apply_cut_save(df_header, df_phot, time_cut_type=None, timevar=None, SN_thre
     df_header, df_phot = compute_S_N_cut(df_header, df_phot, SN_threshold=None)
 
     # format sntypes as sim
-    if 'fake' in dump_prefix:
+    if 'fake' in dump_dir:
         df_header["SNTYPE"] = df_header["SNTYPE"].apply(
             lambda x: 1 if x == 0 else 0)
     else:
@@ -98,3 +99,28 @@ def apply_cut_save(df_header, df_phot, time_cut_type=None, timevar=None, SN_thre
     path_plots = f'{dump_dir}/{cut_version}/{Path(dump_prefix).parent}/skimmed_lightcurves/'
     vu.plot_random_lcs(df_phot, path_plots, multiplots=False,
                        nb_lcs=20, plot_peak=False)
+
+
+def skim_data(raw_dir,dump_dir, bazin_file, time_cut_type,timevar,SN_threshold):
+    """ Skim PHOT and HEAD.FITS
+    """
+
+    list_files = glob.glob(os.path.join(f"{raw_dir}", "*PHOT.FITS"))
+
+    # load Bazin
+    if Path(bazin_file).exists():
+        df_bazin = du.load_bazin_fits(bazin_file)
+
+    # skim each FITS file
+    for fname in list_files:
+        # fetch data year as prefix
+        dump_prefix = Path(fname).name.split("_")[0]
+        lu.print_blue(f"Processing: {dump_prefix}")
+
+        df_header, df_phot = du.read_fits(fname)
+        df_header = pd.merge(df_header, df_bazin, on='SNID')
+        df_header = df_header[[
+            k for k in df_header.keys() if 'Unnamed' not in k]]
+        # apply cuts
+        apply_cut_save(df_header, df_phot, time_cut_type=time_cut_type, timevar=timevar,
+                          SN_threshold=SN_threshold, dump_dir=dump_dir, dump_prefix=dump_prefix)

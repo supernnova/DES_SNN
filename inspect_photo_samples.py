@@ -551,7 +551,7 @@ for dtype in ["real","fake"]:
     print()
     for cut_type in ['window_bazin_SNNone', 'window_trigger_SNNone', 'window_bazin_SN3']:
 
-        skim_dir = f"./dumps/{cut_type}/{dtype}"
+        skim_dir = f"./dumps/{dtype}/{cut_type}/"
 
         df_pred[cut_type] = load_predictions_and_info(skim_dir, model_name)
 
