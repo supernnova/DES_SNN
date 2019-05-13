@@ -10,15 +10,9 @@ import utils.cuts_utils as cu
 import utils.data_utils as du
 from astropy.table import Table
 import utils.logging_utils as lu
-from collections import OrderedDict
 from utils import evaluation_utils as eu
 from utils import visualization_utils as vu
-
-spec_sample_type_dic = OrderedDict({"1": "Ia", "0": "unknown", "2": "SNIax", "3": "SNIa-pec", "20": "SNIIP", "21": "SNIIL", "22": "SNIIn", "29": "SNII",
-                        "32": "SNIb", "33": "SNIc", "39": "SNIbc", "41": "SLSN-I", "42": "SLSN-II", "43": "SLSN-R", "80": "AGN", "81": "galaxy", "98": "None", "99": "pending"})
-
-model_files = [
-        "../SuperNNova_general/trained_models_mutant/vanilla_S_0_CLF_2_R_None_photometry_DF_1.0_N_global_lstm_32x2_0.05_128_True_mean_C/vanilla_S_0_CLF_2_R_None_photometry_DF_1.0_N_global_lstm_32x2_0.05_128_True_mean_C.pt"]
+from utils.data_utils import spec_sample_type_dic
 
 def do_classification(skim_dir,model_files,sntypes):
     """ SNN classification
@@ -74,6 +68,23 @@ def do_classification(skim_dir,model_files,sntypes):
     # "the classified sample"
     eu.pair_plots(df, path_plot)     
 
+
+def classify_data(dump_dir,dtype):
+        # in skim we incorporat ethe name change already
+        sntypes = spec_sample_type_dic
+
+        # do SNN classifications
+        time_cut_type = 'window'
+        SN_threshold = None
+        timevar = 'trigger'
+        do_classification(f"{dump_dir}/{time_cut_type}_{timevar}_SN{SN_threshold}/{dtype}/",model_files,sntypes)
+        timevar = 'bazin'
+        do_classification(f"{dump_dir}/{time_cut_type}_{timevar}_SN{SN_threshold}/{dtype}/",model_files,sntypes)
+
+        SN_threshold = 3
+        timevar = 'bazin'
+        do_classification(f"{dump_dir}/{time_cut_type}_{timevar}_SN{SN_threshold}/{dtype}/",model_files,sntypes)
+
 def skim_data(raw_dir,dtype,dump_dir):
 
         list_files = glob.glob(os.path.join(f"{raw_dir}", "*PHOT.FITS"))
@@ -110,38 +121,24 @@ def skim_data(raw_dir,dtype,dump_dir):
             cu.apply_cut_save(df_header, df_phot, time_cut_type=time_cut_type, timevar=timevar,
                               SN_threshold=SN_threshold, dump_dir=dump_dir, dump_prefix=dump_prefix)
 
-def classify_data(dump_dir,dtype):
-        # in skim we incorporat ethe name change already
-        sntypes = spec_sample_type_dic
+if __name__ == '__main__':
 
-        # do SNN classifications
-        time_cut_type = 'window'
-        SN_threshold = None
-        timevar = 'trigger'
-        do_classification(f"{dump_dir}/{time_cut_type}_{timevar}_SN{SN_threshold}/{dtype}/",model_files,sntypes)
-        timevar = 'bazin'
-        do_classification(f"{dump_dir}/{time_cut_type}_{timevar}_SN{SN_threshold}/{dtype}/",model_files,sntypes)
+    # settings
+    debug = False
+    skim = True
+    classify = False
 
-        SN_threshold = 3
-        timevar = 'bazin'
-        do_classification(f"{dump_dir}/{time_cut_type}_{timevar}_SN{SN_threshold}/{dtype}/",model_files,sntypes)
-"""
-MAIN
-"""
+    # init paths
+    path_des_data = os.environ.get("DES_DATA")
+    dump_dir = "./dumps/"
+    model_files = [
+            "../SuperNNova_general/trained_models_mutant/vanilla_S_0_CLF_2_R_None_photometry_DF_1.0_N_global_lstm_32x2_0.05_128_True_mean_C/vanilla_S_0_CLF_2_R_None_photometry_DF_1.0_N_global_lstm_32x2_0.05_128_True_mean_C.pt"]
 
-# settings
-debug = False
-skim = True
-classify = True
 
-# init paths
-path_des_data = os.environ.get("DES_DATA")
-dump_dir = "./dumps/"
+    for dtype in ["fake","real"]:
+        if skim:
+            raw_dir = f"{path_des_data}/DESALL_forcePhoto_{dtype}_snana_fits/"
+            skim_data(raw_dir,dtype,dump_dir)
 
-for dtype in  ["fake","real"]:
-    if skim:
-        raw_dir = f"{path_des_data}/DESALL_forcePhoto_{dtype}_snana_fits/"
-        skim_data(raw_dir,dtype,dump_dir)
-
-    if classify:
-        classify_data(dump_dir,dtype)
+        if classify:
+            classify_data(dump_dir,dtype)

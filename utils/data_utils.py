@@ -8,16 +8,21 @@ import multiprocessing
 from pathlib import Path
 from astropy.table import Table
 import utils.logging_utils as lu
+from collections import OrderedDict
+
+spec_sample_type_dic = OrderedDict({"1": "Ia", "0": "unknown", "2": "SNIax", "3": "SNIa-pec", "20": "SNIIP", "21": "SNIIL", "22": "SNIIn", "29": "SNII",
+                            "32": "SNIb", "33": "SNIc", "39": "SNIbc", "41": "SLSN-I", "42": "SLSN-II", "43": "SLSN-R", "80": "AGN", "81": "galaxy", "98": "None", "99": "pending"})
 
 
 def spec_type_decoder(typ):
     try:
         spec_sample_type_dic = {"1": "Ia", "0": "unknown", "2": "SNIax", "3": "SNIa-pec", "20": "SNIIP", "21": "SNIIL", "22": "SNIIn", "29": "SNII",
-                            "32": "SNIb", "33": "SNIc", "39": "SNIbc", "41": "SLSN-I", "42": "SLSN-II", "43": "SLSN-R", "80": "AGN", "81": "galaxy","98": "None", "99": "pending"}
+                                "32": "SNIb", "33": "SNIc", "39": "SNIbc", "41": "SLSN-I", "42": "SLSN-II", "43": "SLSN-R", "80": "AGN", "81": "galaxy", "98": "None", "99": "pending"}
         tag = spec_sample_type_dic[str(typ)]
     except Exception:
         tag = f"{typ}"
     return tag
+
 
 def read_fits(fname):
     # load photometry
@@ -55,7 +60,7 @@ def fetch_header_info(path):
     for fname in list_head:
         dat = Table.read(fname, format='fits')
         list_df_head.append(dat.to_pandas())
-    df_head = pd.concat(list_df_head,sort=True)
+    df_head = pd.concat(list_df_head, sort=True)
     return df_head
 
 
@@ -86,8 +91,8 @@ def save_phot_fits(df, fname):
     if df_phot.MJD.values[0] == -777.0:
         df_phot = df_phot.drop(df_phot.index[0])
 
-    mask_seven = df_phot['MJD']==-777.0
-    df_phot.loc[mask_seven,'SNID'] = 0
+    mask_seven = df_phot['MJD'] == -777.0
+    df_phot.loc[mask_seven, 'SNID'] = 0
 
     df_phot = df_phot.reset_index()
     df_phot_saved = df_phot[keep_col_phot]

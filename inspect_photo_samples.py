@@ -344,16 +344,23 @@ def plot_hist(df, var, nameout, log=False):
     plt.savefig(nameout)
 
 
-def plot_superimposed_hist(df_dic, var, nameout=None, log=False):
+def plot_superimposed_hist(df_dic, var, nameout=None, log=False, limits_from_photo_sample = False):
     fig = plt.figure()
-    bins = 10
-    for k in df_dic.keys():
+    bins = 30
+    if limits_from_photo_sample:
+        keys_to_plot =  ['photo Ia sample'] + [k for k in df_dic.keys() if 'photo Ia sample' not in k]
+    else:
+        keys_to_plot = df_dic.keys()
+
+    for k in keys_to_plot:
         df_dic[k] = df_dic[k].fillna(0)
         n, bins, pathes = plt.hist(
             df_dic[k][var], label=k, histtype='step', bins=bins)
     plt.xlabel(var)
     if log:
         plt.yscale("log")
+    if limits_from_photo_sample:
+        plt.xlim(df_dic['photo Ia sample'][var].min(),df_dic['photo Ia sample'][var].max())
     plt.legend()
     plt.savefig(nameout)
     plt.close()
@@ -395,8 +402,7 @@ def load_predictions_and_info(skim_dir,model_name):
     df_SNinfo = du.fetch_header_info(skim_dir)
     cols_to_merge = ["SNID"] + [
         k for k in df_SNinfo.keys() if k not in df_pred_tmp.keys()]
-    df_pred = df_pred_tmp.merge(df_SNinfo.reset_index()[
-        cols_to_merge], how="left", on="SNID")
+    df_pred = df_pred_tmp.merge(df_SNinfo[cols_to_merge], how="left", on="SNID")
 
     return  df_pred
 
@@ -497,9 +503,16 @@ def get_stats_for_sample(df_pred,photo_Ia,photo_nonIa, skim_dir,model_files=None
     # inspect sample
     path_plots = f"{skim_dir}/figures/"
     Path(path_plots).mkdir(parents=True, exist_ok=True)
-    df_dic = {'phot sample': photo_Ia['all'], 'contaminants': photo_Ia['spec_nonIa']}
+    if 'fake' in skim_dir:
+        df_dic = {'all_lcs': df_pred,'photo Ia sample': photo_Ia['all']}
+    else:
+        df_dic = {'all_lcs': df_pred,'photo Ia sample': photo_Ia['all'], 'contaminants': photo_Ia['spec_nonIa'],'photo other but spec Ia ': photo_nonIa['spec_Ia']}
     for var in [k for k in ['REDSHIFT_FINAL', 'PRIVATE(DES_numepochs_ml)', 'all_class0', 'PRIVATE(DES_cand_type)', 'TYPE', 'PRIVATE(DES_mjd_trigger)', 'PKMJDINI'] if k in photo_Ia['all'].keys()]:
-        plot_superimposed_hist(df_dic, var, nameout=f"{path_plots}/photo_Ia_{var}_dist.png", log=True)
+        plot_superimposed_hist(df_dic, var, nameout=f"{path_plots}/hist_{var}_dist.png", log=True)
+
+    for var in ['FLUXCAL_max','SNRMAX1']:
+        # photo sample zoom
+        plot_superimposed_hist(df_dic, var, nameout=f"{path_plots}/hist_{var}_dist.png", log=True,limits_from_photo_sample=True)
 
     # Stats
     lu.print_green(cut_type)
