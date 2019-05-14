@@ -91,7 +91,7 @@ if __name__ == '__main__':
 
     # settings
     debug = False
-    skim = False
+    skim = True
     classify = True
 
     # init paths

@@ -503,11 +503,13 @@ def get_stats_for_sample(df_pred,photo_Ia,photo_nonIa, skim_dir,model_files=None
     # inspect sample
     path_plots = f"{skim_dir}/figures/"
     Path(path_plots).mkdir(parents=True, exist_ok=True)
+    vars_to_plot = [ k for k in ['REDSHIFT_FINAL', 'PRIVATE(DES_numepochs_ml)', 'all_class0', 'PRIVATE(DES_cand_type)', 'TYPE', 'PRIVATE(DES_mjd_trigger)', 'PKMJDINI'] if k in photo_Ia['all'].keys()]
     if 'fake' in skim_dir:
         df_dic = {'all_lcs': df_pred,'photo Ia sample': photo_Ia['all']}
+        vars_to_plot += ['PRIVATE(DES_fake_salt2x1)','PRIVATE(DES_fake_salt2c)']
     else:
         df_dic = {'all_lcs': df_pred,'photo Ia sample': photo_Ia['all'], 'contaminants': photo_Ia['spec_nonIa'],'photo other but spec Ia ': photo_nonIa['spec_Ia']}
-    for var in [k for k in ['REDSHIFT_FINAL', 'PRIVATE(DES_numepochs_ml)', 'all_class0', 'PRIVATE(DES_cand_type)', 'TYPE', 'PRIVATE(DES_mjd_trigger)', 'PKMJDINI'] if k in photo_Ia['all'].keys()]:
+    for var in [k for k in vars_to_plot]:
         plot_superimposed_hist(df_dic, var, nameout=f"{path_plots}/hist_{var}_dist.png", log=True)
 
     for var in ['FLUXCAL_max','SNRMAX1']:
@@ -535,7 +537,7 @@ def get_stats_for_sample(df_pred,photo_Ia,photo_nonIa, skim_dir,model_files=None
 """
 Main
 """
-plot = True
+plot = False
 model_name = "vanilla_S_0_CLF_2_R_None_photometry_DF_1.0_N_global_lstm_32x2_0.05_128_True_mean_C"
 model_files = [
     f"../SuperNNova_general/trained_models_mutant/{model_name}/{model_name}.pt"]
@@ -581,4 +583,5 @@ for dtype in ["real","fake"]:
 
     # dump sample
     common_photo_Ia['all_no_spec_nonIa'][[
-        'SNID', 'HOSTGAL_OBJID', 'HOSTGAL2_OBJID', 'DEC', 'RA']].to_csv(f'{out_dir[dtype]}/sample.csv')
+        'SNID', 'HOSTGAL_OBJID', 'HOSTGAL2_OBJID', 'DEC', 'RA']].to_csv(f'./dumps/photo_samples/{out_dir[dtype]}/sample.csv')
+
