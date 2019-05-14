@@ -1,6 +1,6 @@
-import os, glob
 import argparse
-from pathlib import Path
+import os
+
 import utils.cuts_utils as cu
 
 if __name__ == '__main__':
@@ -41,15 +41,31 @@ if __name__ == '__main__':
         "--time_var",
         type=str,
         default="trigger",
-        choices=["trigger","bazin"],
+        choices=["trigger", "bazin"],
         help="Variable to use for time cut",
     )
     parser.add_argument(
         "--SN_threshold",
         default=None,
-        choices=[None,3],
+        choices=[None, 3],
         help="S/N threshold to use, default None",
     )
-
+    parser.add_argument(
+        "--done_file",
+        type=str,
+        default="done_file.txt",
+        help="Location of the done file"
+    )
     args = parser.parse_args()
-    cu.skim_data(args.raw_dir,args.dump_dir, args.fits_file, args.time_cut_type,args.time_var,args.SN_threshold)
+
+    done_file = os.path.join(args.dump_dir, args.done_file)
+    try:
+        cu.skim_data(args.raw_dir, args.dump_dir, args.fits_file, args.time_cut_type, args.time_var, args.SN_threshold)
+    except Exception as e:
+        with open(done_file, "w") as f:
+            f.write("FAILURE")
+        raise e
+    else:
+        with open(done_file, "w") as f:
+            f.write("SUCCESS")
+

@@ -3,3 +3,4 @@ dump/
 */*.pyc
 */*/*.pyc
 .cache
+.idea/

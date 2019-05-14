@@ -1,8 +1,5 @@
 import os
 import glob
-import datetime
-import argparse
-import numpy as np
 import pandas as pd
 from pathlib import Path
 import utils.data_utils as du
@@ -18,10 +15,11 @@ def compute_time_cut(df_header, df_phot, time_cut_type=None, timevar_to_cut=None
         df_info_for_skim = df_header[["SNID", timevar_to_cut]]
         df_phot = pd.merge(df_phot, df_info_for_skim, on="SNID", how="left")
         mask = (df_phot['MJD'] != -777.00)
-        df_phot['delta_time'] = df_phot['MJD']-df_phot[timevar_to_cut]
+        df_phot['delta_time'] = df_phot['MJD'] - df_phot[timevar_to_cut]
         df_phot['time_cut'] = True
-        df_phot.loc[mask, 'time_cut'] = df_phot["delta_time"].apply(lambda x: True if (
-            x > 0 and x < 70) else (True if (x <= 0 and x > -30) else False))
+        df_phot.loc[mask, 'time_cut'] = df_phot["delta_time"].apply(
+            lambda x: True if (x > 0 and x < 70) else (True if (x <= 0 and x > -30) else False)
+        )
         df_phot = df_phot[df_phot['time_cut'] == True]
 
         ids_to_keep = df_phot["SNID"].unique()
@@ -32,7 +30,7 @@ def compute_time_cut(df_header, df_phot, time_cut_type=None, timevar_to_cut=None
 
 def compute_S_N_cut(df_header, df_phot, SN_threshold=None):
     # S/N cut (for limiting magnitudes)
-    df_phot['S/N'] = df_phot['FLUXCAL']/df_phot['FLUXCALERR']
+    df_phot['S/N'] = df_phot['FLUXCAL'] / df_phot['FLUXCALERR']
     df_phot['S/N_cut'] = True
     mask = (df_phot['MJD'] != -777.00)
     if SN_threshold:
@@ -48,7 +46,8 @@ def compute_S_N_cut(df_header, df_phot, SN_threshold=None):
     return df_header, df_phot
 
 
-def apply_cut_save(df_header, df_phot, time_cut_type=None, timevar=None, SN_threshold=None, dump_dir=None, dump_prefix=None):
+def apply_cut_save(df_header, df_phot, time_cut_type=None, timevar=None, SN_threshold=None, dump_dir=None,
+                   dump_prefix=None):
     # init
     if timevar == 'trigger':
         timevar_to_cut = 'PRIVATE(DES_mjd_trigger)'
@@ -77,9 +76,9 @@ def apply_cut_save(df_header, df_phot, time_cut_type=None, timevar=None, SN_thre
     # select only high S/N values
     df_tmp = df_phot.groupby('SNID').max()
     df_tmp['SNID'] = df_tmp.index
-    df_extra_info = df_tmp[['SNID','FLUXCAL','S/N']]
-    df_extra_info = df_extra_info.rename(columns={'SNID':'SNID','FLUXCAL':'FLUXCAL_max','S/N':'S/N_max'})
-    df_phot = df_phot.merge(df_extra_info,on='SNID')
+    df_extra_info = df_tmp[['SNID', 'FLUXCAL', 'S/N']]
+    df_extra_info = df_extra_info.rename(columns={'SNID': 'SNID', 'FLUXCAL': 'FLUXCAL_max', 'S/N': 'S/N_max'})
+    df_phot = df_phot.merge(df_extra_info, on='SNID')
 
     # save
     df_phot_saved = du.save_phot_fits(df_phot, f'{dump_dir}/{cut_version}/{dump_prefix}_PHOT.FITS')
@@ -88,7 +87,7 @@ def apply_cut_save(df_header, df_phot, time_cut_type=None, timevar=None, SN_thre
     df_phot_for_header = df_phot_saved.loc[df_phot_saved["SNID"].shift(
     ) != df_phot_saved["SNID"]]
     df_phot_for_header = df_phot_for_header.reset_index()
-    df_header_tosave = df_phot_for_header[['SNID','FLUXCAL_max','S/N_max']].merge(df_header, on='SNID')
+    df_header_tosave = df_phot_for_header[['SNID', 'FLUXCAL_max', 'S/N_max']].merge(df_header, on='SNID')
     du.save_fits(df_header_tosave, f'{dump_dir}/{cut_version}/{dump_prefix}_HEAD.FITS')
 
     # if fake do histogram with delta_t
@@ -101,13 +100,14 @@ def apply_cut_save(df_header, df_phot, time_cut_type=None, timevar=None, SN_thre
                        nb_lcs=20, plot_peak=False)
 
 
-def skim_data(raw_dir,dump_dir, bazin_file, time_cut_type,timevar,SN_threshold):
+def skim_data(raw_dir, dump_dir, bazin_file, time_cut_type, timevar, SN_threshold):
     """ Skim PHOT and HEAD.FITS
     """
 
     list_files = glob.glob(os.path.join(f"{raw_dir}", "*PHOT.FITS"))
 
     # load Bazin
+    df_bazin = None
     if Path(bazin_file).exists():
         df_bazin = du.load_bazin_fits(bazin_file)
 
@@ -118,9 +118,9 @@ def skim_data(raw_dir,dump_dir, bazin_file, time_cut_type,timevar,SN_threshold):
         lu.print_blue(f"Processing: {dump_prefix}")
 
         df_header, df_phot = du.read_fits(fname)
-        df_header = pd.merge(df_header, df_bazin, on='SNID')
-        df_header = df_header[[
-            k for k in df_header.keys() if 'Unnamed' not in k]]
+        if df_bazin is not None:
+            df_header = pd.merge(df_header, df_bazin, on='SNID')
+        df_header = df_header[[k for k in df_header.keys() if 'Unnamed' not in k]]
         # apply cuts
         apply_cut_save(df_header, df_phot, time_cut_type=time_cut_type, timevar=timevar,
-                          SN_threshold=SN_threshold, dump_dir=dump_dir, dump_prefix=dump_prefix)
+                       SN_threshold=SN_threshold, dump_dir=dump_dir, dump_prefix=dump_prefix)
