@@ -103,8 +103,8 @@ def apply_cut_save(df_header, df_phot, time_cut_type=None, timevar=None, SN_thre
 def skim_data(raw_dir, dump_dir, bazin_file, time_cut_type, timevar, SN_threshold):
     """ Skim PHOT and HEAD.FITS
     """
-
     list_files = glob.glob(os.path.join(f"{raw_dir}", "*PHOT.FITS"))
+    lu.print_green(f"Starting data skimming, found {len(list_files)} to operate on")
 
     # load Bazin
     df_bazin = None
