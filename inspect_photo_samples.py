@@ -9,6 +9,7 @@ import utils.logging_utils as lu
 from utils import evaluation_utils as eu
 from utils import visualization_utils as vu
 
+
 def get_photo_sample_w_spec_tags(df_pred, photo_SNIDs=None):
 
     # define photo samples
@@ -78,13 +79,13 @@ def get_sample_stats_and_plots(df_pred, photo_Ia, photo_nonIa, skim_dir, model_f
     photo_Ia['all_no_spec_nonIa'] = photo_Ia['all_no_spec_nonIa'].fillna(0)
     photo_Ia['spec_nonIa'] = photo_Ia['spec_nonIa'].fillna(0)
     photo_Ia['all_no_spec_nonIa'][[
-        'SNID', 'HOSTGAL_OBJID', 'DEC', 'RA', 'TYPE', 'REDSHIFT_FINAL', 'HOSTGAL_PHOTOZ', 'HOSTGAL_SPECZ', 'all_class0','c','x1']].to_csv(f'{out_dir}/photo_Ia.csv')
+        'SNID', 'HOSTGAL_OBJID', 'DEC', 'RA', 'TYPE', 'REDSHIFT_FINAL', 'HOSTGAL_PHOTOZ', 'HOSTGAL_SPECZ', 'all_class0', 'c', 'x1']].to_csv(f'{out_dir}/photo_Ia.csv')
     # dump contaminants
     photo_Ia['spec_nonIa'][[
-        'SNID', 'HOSTGAL_OBJID', 'DEC', 'RA', 'TYPE', 'REDSHIFT_FINAL', 'HOSTGAL_PHOTOZ', 'HOSTGAL_SPECZ', 'all_class0','c','x1']].to_csv(f'{out_dir}/photo_Ia_spec_contamination.csv')
+        'SNID', 'HOSTGAL_OBJID', 'DEC', 'RA', 'TYPE', 'REDSHIFT_FINAL', 'HOSTGAL_PHOTOZ', 'HOSTGAL_SPECZ', 'all_class0', 'c', 'x1']].to_csv(f'{out_dir}/photo_Ia_spec_contamination.csv')
     # dump missed Ias
     photo_nonIa['spec_Ia'][[
-        'SNID', 'HOSTGAL_OBJID', 'DEC', 'RA', 'TYPE', 'REDSHIFT_FINAL', 'HOSTGAL_PHOTOZ', 'HOSTGAL_SPECZ', 'all_class0','c','x1']].to_csv(f'{out_dir}/photo_nonIa_spec_Ia.csv')
+        'SNID', 'HOSTGAL_OBJID', 'DEC', 'RA', 'TYPE', 'REDSHIFT_FINAL', 'HOSTGAL_PHOTOZ', 'HOSTGAL_SPECZ', 'all_class0', 'c', 'x1']].to_csv(f'{out_dir}/photo_nonIa_spec_Ia.csv')
 
     # plot lcs
     if plot:
@@ -102,11 +103,11 @@ def get_sample_stats_and_plots(df_pred, photo_Ia, photo_nonIa, skim_dir, model_f
         vu.plot_hist(photo_nonIa['all'], 'TYPE', nameout=f"{path_plots}/photo_nonIa_hist_type.png", log=True)
 
         df_dic = {'photo Ia sample': photo_Ia['all'], 'photo & spec Ia ': photo_Ia['spec_Ia'],
-                      'photo other but spec Ia ': photo_nonIa['spec_Ia']}
+                  'photo other but spec Ia ': photo_nonIa['spec_Ia']}
         for var in ['REDSHIFT_FINAL', 'HOSTGAL_PHOTOZ', 'HOSTGAL_SPECZ', 'all_class0']:
             vu.plot_superimposed_hist(df_dic, var, nameout=f"{path_plots}/hist_{var}_dist_spec.png", log=True, only_positive_x=True)
-        for var in ['FLUXCAL_max','c','x1']:
-            vu.plot_superimposed_hist(df_dic, var, nameout=f"{path_plots}/hist_{var}_dist_spec.png", log=True, only_positive_x=False,bins=20)
+        for var in ['FLUXCAL_max', 'c', 'x1']:
+            vu.plot_superimposed_hist(df_dic, var, nameout=f"{path_plots}/hist_{var}_dist_spec.png", log=True, only_positive_x=False, bins=20)
 
 
 """
@@ -138,8 +139,9 @@ for dtype in ["real", "fake"]:
         # add salt2 fit parameters
         raw_dir = f"{path_des_data}/DESALL_forcePhoto_{dtype}_snana_fits/"
         saltfit = du.load_fitres(raw_dir)
-        saltfit = saltfit[['SNID']+[k for k in saltfit.keys() if k not in df_pred[cut_type].keys()]]
-        df_pred[cut_type] = df_pred[cut_type].merge(saltfit,on='SNID')
+        saltfit = saltfit[['SNID']+[k for k in saltfit.keys()
+                                    if k not in df_pred[cut_type].keys()]]
+        df_pred[cut_type] = df_pred[cut_type].merge(saltfit, on='SNID')
 
         # get photo samples
         photo_Ia[cut_type], photo_nonIa[cut_type] = get_photo_sample_w_spec_tags(
@@ -152,8 +154,7 @@ for dtype in ["real", "fake"]:
         # time cut study
         if dtype == 'fake':
             eu.get_time_cut_stats_and_plot(
-                df_pred[cut_type], photo_Ia[cut_type]['all'], skim_dir, cut_type, plot=plot,model_files=model_files)
-        
+                df_pred[cut_type], photo_Ia[cut_type]['all'], skim_dir, cut_type, plot=plot, model_files=model_files)
 
     # get common sample of the two cut types
     lu.print_green("common")

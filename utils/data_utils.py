@@ -11,7 +11,7 @@ import utils.logging_utils as lu
 from collections import OrderedDict
 
 spec_sample_type_dic = OrderedDict({"1": "Ia", "0": "unknown", "2": "SNIax", "3": "SNIa-pec", "20": "SNIIP", "21": "SNIIL", "22": "SNIIn", "29": "SNII",
-                            "32": "SNIb", "33": "SNIc", "39": "SNIbc", "41": "SLSN-I", "42": "SLSN-II", "43": "SLSN-R", "80": "AGN", "81": "galaxy", "98": "None", "99": "pending"})
+                                    "32": "SNIb", "33": "SNIc", "39": "SNIbc", "41": "SLSN-I", "42": "SLSN-II", "43": "SLSN-R", "80": "AGN", "81": "galaxy", "98": "None", "99": "pending"})
 
 
 def spec_type_decoder(typ):
@@ -106,3 +106,37 @@ def load_bazin_fits(bazin_file):
     fit["SNID"] = fit["CID"].astype(int)
 
     return fit
+
+
+def load_predictions_and_info(skim_dir, model_name):
+    df_pred_tmp = pd.read_pickle(f"{skim_dir}/models/{model_name}/PRED_{model_name}.pickle")
+    # compute predicted target for complete lc classification
+    df_pred_tmp["predicted_target"] = (
+        df_pred_tmp[[k for k in df_pred_tmp.keys() if "all_class" in k]]
+        .idxmax(axis=1)
+        .str.strip("all_class")
+        .astype(int))
+
+    # add header info
+    df_SNinfo = fetch_header_info(skim_dir)
+    cols_to_merge = ["SNID"] + [
+        k for k in df_SNinfo.keys() if k not in df_pred_tmp.keys()]
+    df_pred = df_pred_tmp.merge(
+        df_SNinfo[cols_to_merge], how="left", on="SNID")
+
+    return df_pred
+
+
+def load_fitres(filepath):
+    '''Load light curve fitres file
+    Arguments:
+        filepath (str) -- Lightcurve fit file with path   
+    Returns:
+        pandas dataframe 
+    '''
+    list_fitres = glob.glob(f"{filepath}/*FITRES")
+    df = pd.read_csv(list_fitres[0], index_col=False,
+                     comment='#', delimiter=' ', skipinitialspace=True)
+    df['SNID'] = df['CID']
+
+    return df
