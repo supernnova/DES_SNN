@@ -56,11 +56,20 @@ if __name__ == '__main__':
         default="done_file.txt",
         help="Location of the done file"
     )
+    parser.add_argument(
+        "--cut_version",
+        type=str,
+        default=None,
+        help="Subfolder to save results into"
+    )
     args = parser.parse_args()
 
-    done_file = os.path.join(args.dump_dir, args.done_file)
+    done_file = args.done_file
+    if not done_file.startswith("/"):
+        done_file = os.path.join(args.dump_dir, args.done_file)
+
     try:
-        cu.skim_data(args.raw_dir, args.dump_dir, args.fits_file, args.time_cut_type, args.time_var, args.SN_threshold)
+        cu.skim_data(args.raw_dir, args.dump_dir, args.fits_file, args.time_cut_type, args.time_var, args.SN_threshold, cut_version=args.cut_version)
     except Exception as e:
         with open(done_file, "w") as f:
             f.write("FAILURE")

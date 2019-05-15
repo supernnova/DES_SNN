@@ -47,7 +47,7 @@ def compute_S_N_cut(df_header, df_phot, SN_threshold=None):
 
 
 def apply_cut_save(df_header, df_phot, time_cut_type=None, timevar=None, SN_threshold=None, dump_dir=None,
-                   dump_prefix=None):
+                   dump_prefix=None, cut_version=None):
     # init
     if timevar == 'trigger':
         timevar_to_cut = 'PRIVATE(DES_mjd_trigger)'
@@ -56,7 +56,8 @@ def apply_cut_save(df_header, df_phot, time_cut_type=None, timevar=None, SN_thre
     else:
         timevar_to_cut = None
 
-    cut_version = f"{time_cut_type}_{timevar}_SN{SN_threshold}"
+    if cut_version is None:
+        cut_version = f"{time_cut_type}_{timevar}_SN{SN_threshold}"
 
     # apply cuts
     df_header, df_phot = compute_time_cut(
@@ -65,12 +66,10 @@ def apply_cut_save(df_header, df_phot, time_cut_type=None, timevar=None, SN_thre
 
     # format sntypes as sim
     if 'fake' in dump_dir:
-        df_header["SNTYPE"] = df_header["SNTYPE"].apply(
-            lambda x: 1 if x == 0 else 0)
+        df_header["SNTYPE"] = df_header["SNTYPE"].apply(lambda x: 1 if x == 0 else 0)
     else:
         # need to add spec
-        df_header["SNTYPE"] = df_header["SNTYPE"].apply(
-            lambda x: 1 if x == 1 else 0)
+        df_header["SNTYPE"] = df_header["SNTYPE"].apply(lambda x: 1 if x == 1 else 0)
 
     # add some extra information abotu the lc
     # select only high S/N values
@@ -84,27 +83,25 @@ def apply_cut_save(df_header, df_phot, time_cut_type=None, timevar=None, SN_thre
     df_phot_saved = du.save_phot_fits(df_phot, f'{dump_dir}/{cut_version}/{dump_prefix}_PHOT.FITS')
     df_phot_saved = df_phot_saved[df_phot_saved['SNID'] != 0]
     # in order to keep same ordering
-    df_phot_for_header = df_phot_saved.loc[df_phot_saved["SNID"].shift(
-    ) != df_phot_saved["SNID"]]
+    df_phot_for_header = df_phot_saved.loc[df_phot_saved["SNID"].shift() != df_phot_saved["SNID"]]
     df_phot_for_header = df_phot_for_header.reset_index()
     df_header_tosave = df_phot_for_header[['SNID', 'FLUXCAL_max', 'S/N_max']].merge(df_header, on='SNID')
     du.save_fits(df_header_tosave, f'{dump_dir}/{cut_version}/{dump_prefix}_HEAD.FITS')
 
     # if fake do histogram with delta_t
-    if "PRIVATE(DES_fake_peakmjd)" in df_header.keys():
-        vu.hist_delta_var(df_header, time_cut_type, timevar,
-                          dump_dir, dump_prefix, cut_version)
+    # if "PRIVATE(DES_fake_peakmjd)" in df_header.keys():
+    #     vu.hist_delta_var(df_header, time_cut_type, timevar,
+    #                       dump_dir, dump_prefix, cut_version)
     # plot lcs for control
-    path_plots = f'{dump_dir}/{cut_version}/{Path(dump_prefix).parent}/skimmed_lightcurves/'
-    vu.plot_random_lcs(df_phot, path_plots, multiplots=False,
-                       nb_lcs=20, plot_peak=False)
+    # path_plots = f'{dump_dir}/{cut_version}/{Path(dump_prefix).parent}/skimmed_lightcurves/'
+    # vu.plot_random_lcs(df_phot, path_plots, multiplots=False, nb_lcs=20, plot_peak=False)
 
 
-def skim_data(raw_dir, dump_dir, bazin_file, time_cut_type, timevar, SN_threshold):
+def skim_data(raw_dir, dump_dir, bazin_file, time_cut_type, timevar, SN_threshold, cut_version=None):
     """ Skim PHOT and HEAD.FITS
     """
-
     list_files = glob.glob(os.path.join(f"{raw_dir}", "*PHOT.FITS"))
+    lu.print_green(f"Starting data skimming, found {len(list_files)} to operate on")
 
     # load Bazin
     df_bazin = None
@@ -122,5 +119,5 @@ def skim_data(raw_dir, dump_dir, bazin_file, time_cut_type, timevar, SN_threshol
             df_header = pd.merge(df_header, df_bazin, on='SNID')
         df_header = df_header[[k for k in df_header.keys() if 'Unnamed' not in k]]
         # apply cuts
-        apply_cut_save(df_header, df_phot, time_cut_type=time_cut_type, timevar=timevar,
+        apply_cut_save(df_header, df_phot, time_cut_type=time_cut_type, timevar=timevar, cut_version=cut_version,
                        SN_threshold=SN_threshold, dump_dir=dump_dir, dump_prefix=dump_prefix)
