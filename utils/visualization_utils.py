@@ -220,7 +220,7 @@ def plot_superimposed_hist(df_dic, var, nameout=None, log=False, limits_from_pho
     for k in keys_to_plot:
         df_dic[k] = df_dic[k].fillna(0)
         n, bins, pathes = plt.hist(
-            df_dic[k][var], label=k, histtype='step', bins=bins)
+            df_dic[k][var], label=f"{k} mean:{round(df_dic[k][var].mean(),1)}+-{round(df_dic[k][var].std(),1)}", histtype='step', bins=bins)
     plt.xlabel(var)
     if log:
         plt.yscale("log")
