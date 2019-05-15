@@ -58,7 +58,10 @@ if __name__ == '__main__':
     )
     args = parser.parse_args()
 
-    done_file = os.path.join(args.dump_dir, args.done_file)
+    done_file = args.done_file
+    if not done_file.startswith("/"):
+        done_file = os.path.join(args.dump_dir, args.done_file)
+
     try:
         cu.skim_data(args.raw_dir, args.dump_dir, args.fits_file, args.time_cut_type, args.time_var, args.SN_threshold)
     except Exception as e:
