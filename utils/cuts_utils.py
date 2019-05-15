@@ -84,20 +84,18 @@ def apply_cut_save(df_header, df_phot, time_cut_type=None, timevar=None, SN_thre
     df_phot_saved = du.save_phot_fits(df_phot, f'{dump_dir}/{cut_version}/{dump_prefix}_PHOT.FITS')
     df_phot_saved = df_phot_saved[df_phot_saved['SNID'] != 0]
     # in order to keep same ordering
-    df_phot_for_header = df_phot_saved.loc[df_phot_saved["SNID"].shift(
-    ) != df_phot_saved["SNID"]]
+    df_phot_for_header = df_phot_saved.loc[df_phot_saved["SNID"].shift() != df_phot_saved["SNID"]]
     df_phot_for_header = df_phot_for_header.reset_index()
     df_header_tosave = df_phot_for_header[['SNID', 'FLUXCAL_max', 'S/N_max']].merge(df_header, on='SNID')
     du.save_fits(df_header_tosave, f'{dump_dir}/{cut_version}/{dump_prefix}_HEAD.FITS')
 
     # if fake do histogram with delta_t
-    if "PRIVATE(DES_fake_peakmjd)" in df_header.keys():
-        vu.hist_delta_var(df_header, time_cut_type, timevar,
-                          dump_dir, dump_prefix, cut_version)
+    # if "PRIVATE(DES_fake_peakmjd)" in df_header.keys():
+    #     vu.hist_delta_var(df_header, time_cut_type, timevar,
+    #                       dump_dir, dump_prefix, cut_version)
     # plot lcs for control
-    path_plots = f'{dump_dir}/{cut_version}/{Path(dump_prefix).parent}/skimmed_lightcurves/'
-    vu.plot_random_lcs(df_phot, path_plots, multiplots=False,
-                       nb_lcs=20, plot_peak=False)
+    # path_plots = f'{dump_dir}/{cut_version}/{Path(dump_prefix).parent}/skimmed_lightcurves/'
+    # vu.plot_random_lcs(df_phot, path_plots, multiplots=False, nb_lcs=20, plot_peak=False)
 
 
 def skim_data(raw_dir, dump_dir, bazin_file, time_cut_type, timevar, SN_threshold):
