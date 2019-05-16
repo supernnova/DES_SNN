@@ -90,9 +90,9 @@ def classify_data(dump_dir):
 if __name__ == '__main__':
 
     # settings
-    debug = False
+    debug = True
     skim = True
-    classify = True
+    classify = False
 
     # init paths
     path_des_data = os.environ.get("DES_DATA")
@@ -108,14 +108,14 @@ if __name__ == '__main__':
 
             # trigger window
             cu.skim_data(raw_dir, dump_dir, bazin_file,
-                         'window', 'trigger', None)
+                         'window', 'trigger', None,debug=debug)
 
             # bazin window
             cu.skim_data(raw_dir, dump_dir, bazin_file,
-                         'window', 'bazin', None)
+                         'window', 'bazin', None,debug=debug)
 
             # bazin window with S/N
-            cu.skim_data(raw_dir, dump_dir, bazin_file, 'window', 'bazin', 3)
+            # cu.skim_data(raw_dir, dump_dir, bazin_file, 'window', 'bazin', 3)
 
         if classify:
             dump_dir = f"{central_dump_dir}/{dtype}/"

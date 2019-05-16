@@ -1,5 +1,6 @@
 import os
 import glob
+import json
 import pandas as pd
 from pathlib import Path
 import utils.data_utils as du
@@ -66,10 +67,10 @@ def apply_cut_save(df_header, df_phot, time_cut_type=None, timevar=None, SN_thre
 
     # format sntypes as sim
     if 'fake' in dump_dir:
-        df_header["SNTYPE"] = df_header["SNTYPE"].apply(lambda x: 1 if x == 0 else 0)
+        df_header["SNTYPE"] = df_header["SNTYPE"].apply(lambda x: 1 if x == 0 else 0).copy()
     else:
         # need to add spec
-        df_header["SNTYPE"] = df_header["SNTYPE"].apply(lambda x: 1 if x == 1 else 0)
+        df_header["SNTYPE"] = df_header["SNTYPE"].apply(lambda x: 1 if x == 1 else 0).copy()
 
     # add some extra information abotu the lc
     # select only high S/N values
@@ -96,11 +97,16 @@ def apply_cut_save(df_header, df_phot, time_cut_type=None, timevar=None, SN_thre
     # path_plots = f'{dump_dir}/{cut_version}/{Path(dump_prefix).parent}/skimmed_lightcurves/'
     # vu.plot_random_lcs(df_phot, path_plots, multiplots=False, nb_lcs=20, plot_peak=False)
 
+    return df_header_tosave.SNTYPE.unique().tolist()
 
-def skim_data(raw_dir, dump_dir, bazin_file, time_cut_type, timevar, SN_threshold, cut_version=None):
+
+def skim_data(raw_dir, dump_dir, bazin_file, time_cut_type, timevar, SN_threshold, cut_version=None, debug=False):
     """ Skim PHOT and HEAD.FITS
     """
     list_files = glob.glob(os.path.join(f"{raw_dir}", "*PHOT.FITS"))
+    if debug:
+        lu.print_yellow('Debugging mode')
+        list_files = list_files[:1]
     lu.print_green(f"Starting data skimming, found {len(list_files)} to operate on")
 
     # load Bazin
@@ -108,6 +114,7 @@ def skim_data(raw_dir, dump_dir, bazin_file, time_cut_type, timevar, SN_threshol
     if Path(bazin_file).exists():
         df_bazin = du.load_bazin_fits(bazin_file)
 
+    tmp_type_list = []
     # skim each FITS file
     for fname in list_files:
         # fetch data year as prefix
@@ -119,5 +126,12 @@ def skim_data(raw_dir, dump_dir, bazin_file, time_cut_type, timevar, SN_threshol
             df_header = pd.merge(df_header, df_bazin, on='SNID')
         df_header = df_header[[k for k in df_header.keys() if 'Unnamed' not in k]]
         # apply cuts
-        apply_cut_save(df_header, df_phot, time_cut_type=time_cut_type, timevar=timevar, cut_version=cut_version,
+        unique_types = apply_cut_save(df_header, df_phot, time_cut_type=time_cut_type, timevar=timevar, cut_version=cut_version,
                        SN_threshold=SN_threshold, dump_dir=dump_dir, dump_prefix=dump_prefix)
+        tmp_type_list += unique_types
+
+    tmp = list(set(tmp_type_list))
+    type_list = [(k,du.spec_type_decoder(k)) for k in tmp]
+    with open(f'{dump_dir}/sntypes.json', 'w') as outfile:
+        json.dump(type_list,outfile)
+
