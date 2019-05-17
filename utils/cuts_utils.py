@@ -5,7 +5,6 @@ import pandas as pd
 from pathlib import Path
 import utils.data_utils as du
 import utils.logging_utils as lu
-import utils.visualization_utils as vu
 
 
 def compute_time_cut(df_header, df_phot, time_cut_type=None, timevar_to_cut=None):
@@ -88,14 +87,6 @@ def apply_cut_save(df_header, df_phot, time_cut_type=None, timevar=None, SN_thre
     df_phot_for_header = df_phot_for_header.reset_index()
     df_header_tosave = df_phot_for_header[['SNID', 'FLUXCAL_max', 'S/N_max']].merge(df_header, on='SNID')
     du.save_fits(df_header_tosave, f'{dump_dir}/{cut_version}/{dump_prefix}_HEAD.FITS')
-
-    # if fake do histogram with delta_t
-    # if "PRIVATE(DES_fake_peakmjd)" in df_header.keys():
-    #     vu.hist_delta_var(df_header, time_cut_type, timevar,
-    #                       dump_dir, dump_prefix, cut_version)
-    # plot lcs for control
-    # path_plots = f'{dump_dir}/{cut_version}/{Path(dump_prefix).parent}/skimmed_lightcurves/'
-    # vu.plot_random_lcs(df_phot, path_plots, multiplots=False, nb_lcs=20, plot_peak=False)
 
     return df_header_tosave.SNTYPE.unique().tolist()
 
