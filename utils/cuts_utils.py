@@ -46,7 +46,7 @@ def compute_S_N_cut(df_header, df_phot, SN_threshold=None):
     return df_header, df_phot
 
 
-def apply_cut_save(df_header, df_phot, time_cut_type=None, timevar=None, SN_threshold=None, dump_dir=None,
+def apply_cut_save(df_header_ori, df_phot_ori, time_cut_type=None, timevar=None, SN_threshold=None, dump_dir=None,
                    dump_prefix=None, cut_version=None):
     # init
     if timevar == 'trigger':
@@ -61,7 +61,10 @@ def apply_cut_save(df_header, df_phot, time_cut_type=None, timevar=None, SN_thre
 
     # apply cuts
     df_header, df_phot = compute_time_cut(
-        df_header, df_phot, time_cut_type=time_cut_type, timevar_to_cut=timevar_to_cut)
+        df_header_ori, df_phot_ori, time_cut_type=time_cut_type, timevar_to_cut=timevar_to_cut)
+    # save columns of original header
+    keys_header = df_header_ori.keys().tolist()
+    # compute S/N cut if any
     df_header, df_phot = compute_S_N_cut(df_header, df_phot, SN_threshold=None)
 
     # format sntypes as sim
@@ -86,6 +89,7 @@ def apply_cut_save(df_header, df_phot, time_cut_type=None, timevar=None, SN_thre
     df_phot_for_header = df_phot_saved.loc[df_phot_saved["SNID"].shift() != df_phot_saved["SNID"]]
     df_phot_for_header = df_phot_for_header.reset_index()
     df_header_tosave = df_phot_for_header[['SNID', 'FLUXCAL_max', 'S/N_max']].merge(df_header, on='SNID')
+    df_header_tosave = df_header_tosave[keys_header + ['FLUXCAL_max', 'S/N_max']]
     du.save_fits(df_header_tosave, f'{dump_dir}/{cut_version}/{dump_prefix}_HEAD.FITS')
 
     return df_header_tosave.SNTYPE.unique().tolist()
@@ -97,7 +101,7 @@ def skim_data(raw_dir, dump_dir, bazin_file, time_cut_type, timevar, SN_threshol
     list_files = glob.glob(os.path.join(f"{raw_dir}", "*PHOT.FITS"))
     if debug:
         lu.print_yellow('Debugging mode')
-        list_files = list_files[:1]
+        list_files = list_files
     lu.print_green(f"Starting data skimming, found {len(list_files)} to operate on")
 
     # load Bazin
