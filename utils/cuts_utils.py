@@ -129,8 +129,7 @@ def skim_data(raw_dir, dump_dir, bazin_file, time_cut_type, timevar, SN_threshol
     # Copy *all* auxiliary files
     aux_files = [f for f in os.listdir(raw_dir) if not f.endswith("FITS")]
     for f in aux_files:
-        ending = f.split(".")[-1]
-        shutil.copy(os.path.join(raw_dir, f),  f'{dump_dir}/{cut_version}/{dump_prefix}.{ending}')
+        shutil.copy(os.path.join(raw_dir, f),  f'{dump_dir}/{cut_version}/')
 
     # Also need to update the .LIST file
     start = os.path.basename(raw_dir)
