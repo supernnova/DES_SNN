@@ -1,6 +1,8 @@
 import os
 import glob
 import json
+import shutil
+
 import pandas as pd
 from pathlib import Path
 import utils.data_utils as du
@@ -90,9 +92,10 @@ def apply_cut_save(df_header_ori, df_phot_ori, time_cut_type=None, timevar=None,
     df_phot_for_header = df_phot_for_header.reset_index()
     df_header_tosave = df_phot_for_header[['SNID', 'FLUXCAL_max', 'S/N_max']].merge(df_header, on='SNID')
     df_header_tosave = df_header_tosave[keys_header + ['FLUXCAL_max', 'S/N_max']]
-    du.save_fits(df_header_tosave, f'{dump_dir}/{cut_version}/{dump_prefix}_HEAD.FITS')
+    filename = f"{dump_prefix}_HEAD.FITS"
+    du.save_fits(df_header_tosave, f'{dump_dir}/{cut_version}/{filename}')
 
-    return df_header_tosave.SNTYPE.unique().tolist()
+    return df_header_tosave.SNTYPE.unique().tolist(), filename
 
 
 def skim_data(raw_dir, dump_dir, bazin_file, time_cut_type, timevar, SN_threshold, cut_version=None, debug=False):
@@ -110,6 +113,7 @@ def skim_data(raw_dir, dump_dir, bazin_file, time_cut_type, timevar, SN_threshol
         df_bazin = du.load_bazin_fits(bazin_file)
 
     tmp_type_list = []
+    filenames = []
     # skim each FITS file
     for fname in list_files:
         # fetch data year as prefix
@@ -121,12 +125,26 @@ def skim_data(raw_dir, dump_dir, bazin_file, time_cut_type, timevar, SN_threshol
             df_header = pd.merge(df_header, df_bazin, on='SNID')
         df_header = df_header[[k for k in df_header.keys() if 'Unnamed' not in k]]
         # apply cuts
-        unique_types = apply_cut_save(df_header, df_phot, time_cut_type=time_cut_type, timevar=timevar, cut_version=cut_version,
+        unique_types, filename = apply_cut_save(df_header, df_phot, time_cut_type=time_cut_type, timevar=timevar, cut_version=cut_version,
                        SN_threshold=SN_threshold, dump_dir=dump_dir, dump_prefix=dump_prefix)
         tmp_type_list += unique_types
+        filenames.append(filename)
 
+    # Copy *all* auxiliary files
+    aux_files = [f for f in os.listdir(raw_dir) if not f.endswith("FITS")]
+    for f in aux_files:
+        shutil.copy(os.path.join(raw_dir, f),  f'{dump_dir}/{cut_version}/')
+
+    # Also need to update the .LIST file
+    start = os.path.basename(raw_dir)
+    list_file = f"{dump_dir}/{cut_version}/{start}.LIST"
+    with open(list_file, "w") as f:
+        for file in filenames:
+            f.write(f"{file}\n")
+
+    # Save out the types
     tmp = list(set(tmp_type_list))
-    type_list = [(k,du.spec_type_decoder(k)) for k in tmp]
+    type_list = [(k, du.spec_type_decoder(k)) for k in tmp]
     with open(f'{dump_dir}/sntypes.json', 'w') as outfile:
-        json.dump(type_list,outfile)
+        json.dump(type_list, outfile)
 
