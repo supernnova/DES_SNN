@@ -1,6 +1,8 @@
 import os
 import glob
 import json
+import shutil
+
 import pandas as pd
 from pathlib import Path
 import utils.data_utils as du
@@ -121,8 +123,14 @@ def skim_data(raw_dir, dump_dir, bazin_file, time_cut_type, timevar, SN_threshol
                        SN_threshold=SN_threshold, dump_dir=dump_dir, dump_prefix=dump_prefix)
         tmp_type_list += unique_types
 
+    # Copy auxiliary files
+    aux_files = [f for f in os.listdir(raw_dir) if not f.endswith("FITS")]
+    for f in aux_files:
+        shutil.copy(os.path.join(raw_dir, f),  f'{dump_dir}/{cut_version}/')
+
+    # Save out the types
     tmp = list(set(tmp_type_list))
-    type_list = [(k,du.spec_type_decoder(k)) for k in tmp]
+    type_list = [(k, du.spec_type_decoder(k)) for k in tmp]
     with open(f'{dump_dir}/sntypes.json', 'w') as outfile:
-        json.dump(type_list,outfile)
+        json.dump(type_list, outfile)
 
