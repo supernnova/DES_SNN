@@ -71,51 +71,38 @@ def do_classification(skim_dir, model_files, sntypes):
 
 
 def classify_data(dump_dir):
+    model_files = [
+        "../SuperNNova_general/trained_models_mutant/vanilla_S_0_CLF_2_R_None_photometry_DF_1.0_N_global_lstm_32x2_0.05_128_True_mean_C/vanilla_S_0_CLF_2_R_None_photometry_DF_1.0_N_global_lstm_32x2_0.05_128_True_mean_C.pt"]
     # in skim we incorporat ethe name change already
     sntypes = spec_sample_type_dic
 
     # do SNN classifications
-    time_cut_type = 'window'
-    SN_threshold = None
-    timevar = 'trigger'
-    do_classification(f"{dump_dir}/{time_cut_type}_{timevar}_SN{SN_threshold}/", model_files, sntypes)
-    timevar = 'bazin'
-    do_classification(f"{dump_dir}/{time_cut_type}_{timevar}_SN{SN_threshold}/", model_files, sntypes)
-
-    SN_threshold = 3
-    timevar = 'bazin'
-    do_classification(f"{dump_dir}/{time_cut_type}_{timevar}_SN{SN_threshold}/", model_files, sntypes)
+    for timevar in ['trigger', 'bazin', 'clump']:
+        do_classification(f"{dump_dir}/{timevar}/", model_files, sntypes)
 
 
 if __name__ == '__main__':
 
     # settings
-    debug = True
+    debug = False
     skim = True
-    classify = False
+    classify = True
 
     # init paths
     path_des_data = os.environ.get("DES_DATA")
     central_dump_dir = "./dumps/"
-    model_files = [
-        "../SuperNNova_general/trained_models_mutant/vanilla_S_0_CLF_2_R_None_photometry_DF_1.0_N_global_lstm_32x2_0.05_128_True_mean_C/vanilla_S_0_CLF_2_R_None_photometry_DF_1.0_N_global_lstm_32x2_0.05_128_True_mean_C.pt"]
 
     for dtype in ["fake", "real"]:
         if skim:
             raw_dir = f"{path_des_data}/DESALL_forcePhoto_{dtype}_snana_fits/"
-            bazin_file = f"{Path(raw_dir)}/DESALL_{dtype}_Bazin_fit.SNANA.TEXT"
             dump_dir = f"{central_dump_dir}/{dtype}/"
 
-            # trigger window
-            cu.skim_data(raw_dir, dump_dir, bazin_file,
-                         'window', 'trigger', None,debug=debug)
-
-            # bazin window
-            cu.skim_data(raw_dir, dump_dir, bazin_file,
-                         'window', 'bazin', None,debug=debug)
-
-            # bazin window with S/N
-            # cu.skim_data(raw_dir, dump_dir, bazin_file, 'window', 'bazin', 3)
+            for timevar in ['trigger', 'bazin', 'clump']:
+                if timevar == 'clump':
+                    fits_file = f"{Path(raw_dir)}/DESALL_{dtype}_clump.SNANA.TEXT"
+                else:
+                    fits_file = f"{Path(raw_dir)}/DESALL_{dtype}_Bazin_fit.SNANA.TEXT"
+                cu.skim_data(raw_dir, dump_dir, fits_file, timevar, debug=debug)
 
         if classify:
             dump_dir = f"{central_dump_dir}/{dtype}/"

@@ -100,11 +100,10 @@ def save_phot_fits(df, fname):
     return df_phot
 
 
-def load_bazin_fits(bazin_file):
-    fit = pd.read_csv(bazin_file, comment="#",
+def load_fits(fits_file):
+    fit = pd.read_csv(fits_file, comment="#",
                       delimiter=" ", skipinitialspace=True)
     fit["SNID"] = fit["CID"].astype(int)
-
     return fit
 
 

@@ -1,12 +1,13 @@
-#Obtaining Bazin fit for DES data and fakes
+# Obtaining Clump fit
 # to run:
 # snana.exe SNFIT_clump.nml
+# outputs csv file with space delimiters
 
   &SNLCINP
 
      ! For SNN-integration:
      OPT_SETPKMJD = 16
-     SNTABLE_LIST = 'SNANA(text:csv)'
+     SNTABLE_LIST = 'SNANA(text:key)'
      TEXTFILE_PREFIX = 'DESALL_fake_clump'
 
      ! data
