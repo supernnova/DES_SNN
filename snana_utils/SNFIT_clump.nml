@@ -1,0 +1,18 @@
+#Obtaining Bazin fit for DES data and fakes
+# to run:
+# snana.exe SNFIT_clump.nml
+
+  &SNLCINP
+
+     ! For SNN-integration:
+     OPT_SETPKMJD = 16
+     SNTABLE_LIST = 'SNANA(text:csv)'
+     TEXTFILE_PREFIX = 'DESALL_fake_clump'
+
+     ! data
+     PRIVATE_DATA_PATH = '$DES_ROOT/lcmerge'
+     VERSION_PHOTOMETRY = 'DESALL_forcePhoto_fake_snana_fits'
+
+     PHOTFLAG_MSKREJ   = 1016 !PHOTFLAG eliminate epoch that has errors, not LC 
+
+  &END
