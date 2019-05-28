@@ -1,6 +1,6 @@
 # DES_SuperNNova
 Application of SuperNNova to DES
 
-- Visualization of data
-- Testing light-curve skimming options
-- Skim options are saved so they can be easily visualized and can be used as input to SuperNNova
+- Visualization of data (original_data_viasualization.py)
+- Testing light-curve skimming options (run_skim_and_classification.py)
+	Just the skimming can be done using skim_data_lcs.py

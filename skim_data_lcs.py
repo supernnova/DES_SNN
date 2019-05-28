@@ -29,26 +29,12 @@ if __name__ == '__main__':
         default="./dumps/",
         help="Default path where skimmed data is dumped",
     )
-
-    parser.add_argument(
-        "--time_cut_type",
-        type=str,
-        default="window",
-        choices=["window"],
-        help="Type of time cut, default window",
-    )
     parser.add_argument(
         "--time_var",
         type=str,
-        default="trigger",
-        choices=["trigger", "bazin"],
-        help="Variable to use for time cut",
-    )
-    parser.add_argument(
-        "--SN_threshold",
-        default=None,
-        choices=[None, 3],
-        help="S/N threshold to use, default None",
+        default="clump",
+        choices=["clump","trigger", "bazin"],
+        help="Computed peak method for time cut",
     )
     parser.add_argument(
         "--done_file",
@@ -57,10 +43,9 @@ if __name__ == '__main__':
         help="Location of the done file"
     )
     parser.add_argument(
-        "--cut_version",
-        type=str,
-        default=None,
-        help="Subfolder to save results into"
+        "--debug",
+        action="store_true",
+        help="Debug: process one file only"
     )
     args = parser.parse_args()
 
@@ -69,7 +54,7 @@ if __name__ == '__main__':
         done_file = os.path.join(args.dump_dir, args.done_file)
 
     try:
-        cu.skim_data(args.raw_dir, args.dump_dir, args.fits_file, args.time_cut_type, args.time_var, args.SN_threshold, cut_version=args.cut_version)
+        cu.skim_data(args.raw_dir, args.dump_dir, args.fits_file,args.time_var,debug=args.debug)
     except Exception as e:
         with open(done_file, "w") as f:
             f.write("FAILURE")
