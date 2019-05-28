@@ -23,7 +23,7 @@ from SuperNNova.supernnova.utils import data_utils as snn_du
 from SuperNNova.supernnova.utils.visualization_utils import FILTER_COLORS, ALL_COLORS, LINE_STYLE
 
 def inspect_peak(df_real, df_fake, dump_dir, debug=False):
-    path_plots = f"{dump_dir}/peak/"
+    path_plots = f"{dump_dir}/inspect_peak/"
     os.makedirs(path_plots, exist_ok=True)
 
     # get attributes by light-curve
@@ -40,9 +40,10 @@ def inspect_peak(df_real, df_fake, dump_dir, debug=False):
     # SCATTER
     fig = plt.figure()
     plt.scatter(df_real['PRIVATE(DES_mjd_trigger)'],
-                df_real['PEAKMJD'], color='blue')
+                df_real['PEAKMJD'], color='blue',label='real')
     plt.scatter(df_fake['PRIVATE(DES_mjd_trigger)'],
-                df_fake['PEAKMJD'], color='orange')
+                df_fake['PEAKMJD'], color='orange',label='fake')
+    plt.legend()
     plt.savefig(f"{path_plots}/scatter_peak_snid_trigger.png")
     del fig
 
@@ -51,6 +52,8 @@ def inspect_peak(df_real, df_fake, dump_dir, debug=False):
              color='blue', histtype="step", label='trigger-psnid')
     plt.hist(df_fake['PRIVATE(DES_fake_peakmjd)']-df_fake['PEAKMJD'],
              color='orange', histtype="step", label='sim-psnid')
+    plt.legend()
+    plt.yscale("log")
     plt.savefig(f"{path_plots}/hist_fake_peak.png")
     del fig
 
