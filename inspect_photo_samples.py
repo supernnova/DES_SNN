@@ -128,7 +128,7 @@ for dtype in ["real", "fake"]:
     print()
     lu.print_blue(f'_____STATS FOR {dtype}_____')
     print()
-    for cut_type in ['window_bazin_SNNone', 'window_trigger_SNNone']:
+    for cut_type in ['bazin', 'trigger']:
         lu.print_green(cut_type)
 
         skim_dir = f"./dumps/{dtype}/{cut_type}/"
@@ -160,14 +160,14 @@ for dtype in ["real", "fake"]:
     lu.print_green("common")
     common_dir = f"./dumps/common/{dtype}"
     Path(skim_dir).mkdir(parents=True, exist_ok=True)
-    common_SNIDs = [k for k in photo_Ia['window_bazin_SNNone']['all'].SNID.values if int(
-        k) in photo_Ia['window_trigger_SNNone']['all'].SNID.values.astype(int)]
+    common_SNIDs = [k for k in photo_Ia['bazin']['all'].SNID.values if int(
+        k) in photo_Ia['trigger']['all'].SNID.values.astype(int)]
     common_photo_Ia, common_photo_nonIa = get_photo_sample_w_spec_tags(
-        df_pred['window_trigger_SNNone'], photo_SNIDs=common_SNIDs)
+        df_pred['trigger'], photo_SNIDs=common_SNIDs)
 
     # venn
-    vu.plot_venn(photo_Ia['window_bazin_SNNone']['all'], photo_Ia['window_trigger_SNNone']['all'], 'SNID', nameout=f"{common_dir}/venn_common_sample.png")
+    vu.plot_venn(photo_Ia['bazin']['all'], photo_Ia['trigger']['all'], 'SNID', nameout=f"{common_dir}/venn_common_sample.png")
 
     # stats for sample
-    get_sample_stats_and_plots(df_pred['window_trigger_SNNone'], common_photo_Ia,
+    get_sample_stats_and_plots(df_pred['trigger'], common_photo_Ia,
                                common_photo_nonIa, skim_dir, model_files=model_files, out_dir=common_dir, plot=plot)
