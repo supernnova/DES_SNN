@@ -29,3 +29,9 @@ git clone https://github.com/supernnova/supernnova.git
 
     # Activate conda environment
     source activate <env>
+
+## DES data environment variable
+setup an environment variable where data is. E.g. in bash/mac osx add to your ~/.bashrc or ~/.bash_profile
+```bash
+export DES_DATA=/Users/yourpathto/DES/data/
+```
