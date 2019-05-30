@@ -11,7 +11,6 @@ import utils.logging_utils as lu
 def compute_time_cut(df_header, df_phot, timevar_to_cut=None):
     # Time cut
     lu.print_green(f"Compute time cut with {timevar_to_cut}")
-    df_phot['time_cut'] = True
     df_info_for_skim = df_header[["SNID", timevar_to_cut]]
     df_phot = pd.merge(df_phot, df_info_for_skim, on="SNID", how="left")
     mask = (df_phot['MJD'] != -777.00)
