@@ -1,4 +1,5 @@
 import os
+import glob
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -118,56 +119,59 @@ plot = True
 
 path_des_data = os.environ.get("DES_DATA")
 model_name = "vanilla_S_0_CLF_2_R_None_photometry_DF_1.0_N_global_lstm_32x2_0.05_128_True_mean_C"
-model_files = [
-    f"../SuperNNova_general/trained_models_mutant/{model_name}/{model_name}.pt"]
+list_models = glob.glob("../SuperNNova_general/trained_models_mutant/*/*.pt")
 
-df_pred = {}
-photo_Ia = {}
-photo_nonIa = {}
-for dtype in ["real", "fake"]:
-    print()
-    lu.print_blue(f'_____STATS FOR {dtype}_____')
-    print()
-    for cut_type in ['bazin', 'trigger']:
-        lu.print_green(cut_type)
+for model in list_models:
+    model_files = [model]
 
-        skim_dir = f"./dumps/{dtype}/{cut_type}/"
+    for dtype in ["real", "fake"]:
+        df_pred = {}
+        photo_Ia = {}
+        photo_nonIa = {}
 
-        # fetch predictions
-        df_pred[cut_type] = du.load_predictions_and_info(skim_dir, model_name)
+        for cut_type in ['bazin','clump','trigger']:
+            print()
+            lu.print_blue(f'_____STATS FOR {dtype} with window {cut_type} model {Path(model).name.split("_")[0]}_____')
+            print()
 
-        # add salt2 fit parameters
-        raw_dir = f"{path_des_data}/DESALL_forcePhoto_{dtype}_snana_fits/"
-        saltfit = du.load_fitres(raw_dir)
-        saltfit = saltfit[['SNID']+[k for k in saltfit.keys()
-                                    if k not in df_pred[cut_type].keys()]]
-        df_pred[cut_type] = df_pred[cut_type].merge(saltfit, on='SNID')
+            skim_dir = f"./dumps/{dtype}/{cut_type}/"
 
-        # get photo samples
-        photo_Ia[cut_type], photo_nonIa[cut_type] = get_photo_sample_w_spec_tags(
-            df_pred[cut_type])
+            # fetch predictions
+            df_pred[cut_type] = du.load_predictions_and_info(skim_dir, model_name)
+
+            # add salt2 fit parameters
+            raw_dir = f"{path_des_data}/DESALL_forcePhoto_{dtype}_snana_fits/"
+            saltfit = du.load_fitres(raw_dir)
+            saltfit = saltfit[['SNID']+[k for k in saltfit.keys()
+                                        if k not in df_pred[cut_type].keys()]]
+            df_pred[cut_type] = df_pred[cut_type].merge(saltfit, on='SNID')
+
+            # get photo samples
+            photo_Ia[cut_type], photo_nonIa[cut_type] = get_photo_sample_w_spec_tags(
+                df_pred[cut_type])
+
+            # stats for sample
+            get_sample_stats_and_plots(df_pred[cut_type], photo_Ia[cut_type],
+                                       photo_nonIa[cut_type], skim_dir, model_files=model_files, plot=plot)
+
+            # time cut study
+            if dtype == 'fake':
+                eu.get_time_cut_stats_and_plot(
+                    df_pred[cut_type], photo_Ia[cut_type]['all'], skim_dir, cut_type, plot=plot, model_files=model_files)
+
+
+        # get common sample of the two cut types
+        lu.print_green("common")
+        common_dir = f"./dumps/common/{dtype}"
+        Path(skim_dir).mkdir(parents=True, exist_ok=True)
+        common_SNIDs = [k for k in photo_Ia['bazin']['all'].SNID.values if int(
+            k) in photo_Ia['trigger']['all'].SNID.values.astype(int)]
+        common_photo_Ia, common_photo_nonIa = get_photo_sample_w_spec_tags(
+            df_pred['trigger'], photo_SNIDs=common_SNIDs)
+
+        # venn
+        vu.plot_venn(photo_Ia['bazin']['all'], photo_Ia['trigger']['all'], 'SNID', nameout=f"{common_dir}/venn_common_sample.png")
 
         # stats for sample
-        get_sample_stats_and_plots(df_pred[cut_type], photo_Ia[cut_type],
-                                   photo_nonIa[cut_type], skim_dir, model_files=model_files, plot=plot)
-
-        # time cut study
-        if dtype == 'fake':
-            eu.get_time_cut_stats_and_plot(
-                df_pred[cut_type], photo_Ia[cut_type]['all'], skim_dir, cut_type, plot=plot, model_files=model_files)
-
-    # get common sample of the two cut types
-    lu.print_green("common")
-    common_dir = f"./dumps/common/{dtype}"
-    Path(skim_dir).mkdir(parents=True, exist_ok=True)
-    common_SNIDs = [k for k in photo_Ia['bazin']['all'].SNID.values if int(
-        k) in photo_Ia['trigger']['all'].SNID.values.astype(int)]
-    common_photo_Ia, common_photo_nonIa = get_photo_sample_w_spec_tags(
-        df_pred['trigger'], photo_SNIDs=common_SNIDs)
-
-    # venn
-    vu.plot_venn(photo_Ia['bazin']['all'], photo_Ia['trigger']['all'], 'SNID', nameout=f"{common_dir}/venn_common_sample.png")
-
-    # stats for sample
-    get_sample_stats_and_plots(df_pred['trigger'], common_photo_Ia,
-                               common_photo_nonIa, skim_dir, model_files=model_files, out_dir=common_dir, plot=plot)
+        get_sample_stats_and_plots(df_pred['trigger'], common_photo_Ia,
+                                   common_photo_nonIa, skim_dir, model_files=model_files, out_dir=common_dir, plot=plot)

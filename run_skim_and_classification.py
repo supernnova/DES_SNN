@@ -15,7 +15,7 @@ from utils import visualization_utils as vu
 from utils.data_utils import spec_sample_type_dic
 
 
-def do_classification(skim_dir, model_files, sntypes):
+def do_classification(skim_dir, list_models, sntypes):
     """ SNN classification
     """
     import SuperNNova.supernnova.conf as conf
@@ -34,58 +34,62 @@ def do_classification(skim_dir, model_files, sntypes):
     snn_args.raw_dir = f"{skim_dir}/"
     snn_args.fits_dir = "./"
     snn_args.sntypes = sntypes
-    snn_args.model_files = model_files
     settings = conf.get_settings(snn_args)
 
     # # make dataset
-    make_dataset.make_dataset(settings)
+    # make_dataset.make_dataset(settings)
 
-    # # # classify
-    # snn_args.validate_rnn = True
-    model_settings = conf.get_settings_from_dump(
-        settings,
-        snn_args.model_files[0],
-        override_source_data=settings.override_source_data,
-    )
-    # fetch predictions
-    prediction_file = validate_rnn.get_predictions(
-        model_settings, model_file=snn_args.model_files[0]
-    )
-    # Compute metrics
-    metrics.get_metrics_singlemodel(
-        model_settings, prediction_file=prediction_file, model_type="rnn"
-    )
-    # plot lcs
-    model_settings.model_files = snn_args.model_files
-    early_prediction.make_early_prediction(model_settings, nb_lcs=20)
+    for model in list_models:
+        # add model file to settings
+        snn_args.model_files = model
+        settings = conf.get_settings(snn_args)
 
-    # evaluate classifications
-    df = eu.fetch_prediction_info(settings, model_settings, skim_dir)
+        model_files = [model]
+        # # # classify
+        # snn_args.validate_rnn = True
+        model_settings = conf.get_settings_from_dump(
+            settings,
+            snn_args.model_files,
+            override_source_data=settings.override_source_data,
+        )
+        # fetch predictions
+        prediction_file = validate_rnn.get_predictions(
+            model_settings, model_file=snn_args.model_files
+        )
+        # Compute metrics
+        metrics.get_metrics_singlemodel(
+            model_settings, prediction_file=prediction_file, model_type="rnn"
+        )
+        # plot lcs
+        model_settings.model_files = snn_args.model_files
+        early_prediction.make_early_prediction(model_settings, nb_lcs=20)
 
-    # plots init
-    path_plot = f"{snn_args.dump_dir}/figures/"
-    eu.plot_efficiency(df, skim_dir, path_plot)
+        # evaluate classifications
+        df = eu.fetch_prediction_info(settings, model_settings, skim_dir)
+
+        # plots init
+        path_plot = f"{snn_args.dump_dir}/figures/"
+        eu.plot_efficiency(df, skim_dir, path_plot)
 
     # "the classified sample"
     eu.pair_plots(df, path_plot)
 
 
 def classify_data(dump_dir):
-    model_files = [
-        "../SuperNNova_general/trained_models_mutant/vanilla_S_0_CLF_2_R_None_photometry_DF_1.0_N_global_lstm_32x2_0.05_128_True_mean_C/vanilla_S_0_CLF_2_R_None_photometry_DF_1.0_N_global_lstm_32x2_0.05_128_True_mean_C.pt"]
+    list_models = glob.glob("../SuperNNova_general/trained_models_mutant/*/*.pt")
     # in skim we incorporat ethe name change already
     sntypes = spec_sample_type_dic
 
     # do SNN classifications
     for timevar in ['trigger', 'bazin', 'clump']:
-        do_classification(f"{dump_dir}/{timevar}/", model_files, sntypes)
+        do_classification(f"{dump_dir}/{timevar}/", list_models, sntypes)
 
 
 if __name__ == '__main__':
 
     # settings
     debug = False
-    skim = True
+    skim = False
     classify = True
 
     # init paths
@@ -102,6 +106,7 @@ if __name__ == '__main__':
                     fits_file = f"{Path(raw_dir)}/DESALL_{dtype}_clump.SNANA.TEXT"
                 else:
                     fits_file = f"{Path(raw_dir)}/DESALL_{dtype}_Bazin_fit.SNANA.TEXT"
+
                 cu.skim_data(raw_dir, dump_dir, fits_file, timevar, debug=debug)
 
         if classify:
