@@ -330,9 +330,13 @@ def make_early_prediction(settings, nb_lcs=1, do_gifs=False, df=None, prefix=Non
     for X, target, SNID, _, X_ori in tqdm(subset_to_plot, ncols=100):
         redshift = df[df["SNID"] == SNID]["REDSHIFT_FINAL"].values[0]
         typ = du.spec_type_decoder(df[df["SNID"] == SNID]["TYPE"].values[0])
-        trigger_time = df[df["SNID"] ==
-                          SNID]['PRIVATE(DES_mjd_trigger)'].values[0]
-        bazin_time = df[df["SNID"] == SNID]['PKMJDINI'].values[0]
+        try:
+            trigger_time = df[df["SNID"] ==
+                              SNID]['PRIVATE(DES_mjd_trigger)'].values[0]
+            bazin_time = df[df["SNID"] == SNID]['PKMJDINI'].values[0]
+        except Exception:
+            trigger_time = 0
+            bazin_time = 0 
         try:
             fake_time = df[df["SNID"] ==
                            SNID]['PRIVATE(DES_fake_peakmjd)'].values[0]
