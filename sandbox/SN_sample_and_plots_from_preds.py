@@ -22,7 +22,7 @@ def lcplot_stats(prefix,df_sel,model_name,plot=True, save=False):
 	if save:
 		save_sample_csv = f"{data_dir}/sample/{model_name}/SN_{prefix}.csv"
 		Path(save_sample_csv).parent.mkdir(parents=True, exist_ok=True)
-		sample[['SNID']].to_csv(f'{save_sample_csv}')
+		sample[['SNID','SNTYPE','predicted_target','RA','DEC']].to_csv(f'{save_sample_csv}')
 
 # model_list = [f"variational_S_0_CLF_{i}_R_None_photometry_DF_1.0_N_global_lstm_32x2_0.01_128_True_mean_C_WD_1e-07" for i in [2,3,7]]
 model_list = [f"variational_S_0_CLF_{i}_R_None_photometry_DF_1.0_N_global_lstm_32x2_0.01_128_True_mean_C_WD_1e-07" for i in [7]]

@@ -106,21 +106,21 @@ def skim_data(raw_dir, dump_dir, fits_file, timevar, debug=False):
         tmp_type_list += unique_types
         filenames.append(filename)
 
-    # Copy *all* auxiliary files
-    aux_files = [f for f in os.listdir(raw_dir) if not f.endswith("FITS")]
-    for f in aux_files:
-        shutil.copy(os.path.join(raw_dir, f),  f'{dump_dir}/{timevar}/')
+    # # Copy *all* auxiliary files
+    # aux_files = [f for f in os.listdir(raw_dir) if not f.endswith("FITS")]
+    # for f in aux_files:
+    #     shutil.copy(os.path.join(raw_dir, f),  f'{dump_dir}/{timevar}/')
 
     # Also need to update the .LIST file
-    start = os.path.basename(raw_dir)
-    list_file = f"{dump_dir}/{timevar}/{start}.LIST"
-    with open(list_file, "w") as f:
-        for file in filenames:
-            f.write(f"{file}\n")
+    # start = os.path.basename(raw_dir)
+    # list_file = f"{dump_dir}/{timevar}/{start}.LIST"
+    # with open(list_file, "w") as f:
+    #     for file in filenames:
+    #         f.write(f"{file}\n")
 
-    # Save out the types
-    tmp = list(set(tmp_type_list))
-    type_list = [(k, du.spec_type_decoder(k)) for k in tmp]
-    with open(f'{dump_dir}/sntypes.json', 'w') as outfile:
-        json.dump(type_list, outfile)
+    # # Save out the types
+    # tmp = list(set(tmp_type_list))
+    # type_list = [(k, du.spec_type_decoder(k)) for k in tmp]
+    # with open(f'{dump_dir}/sntypes.json', 'w') as outfile:
+    #     json.dump(type_list, outfile)
 

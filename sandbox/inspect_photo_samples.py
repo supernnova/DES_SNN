@@ -10,6 +10,11 @@ import utils.logging_utils as lu
 from utils import evaluation_utils as eu
 from utils import visualization_utils as vu
 
+"""
+Code written when comapring different time window cuts samples
+tested peak lc using trigger time, clump, bazin fit
+checked common samples
+"""
 
 def get_photo_sample_w_spec_tags(df_pred, photo_SNIDs=None):
 
@@ -115,7 +120,7 @@ def get_sample_stats_and_plots(df_pred, photo_Ia, photo_nonIa, skim_dir, model_f
 Main
 """
 
-plot = True
+plot = False
 
 path_des_data = os.environ.get("DES_DATA")
 model_name = "vanilla_S_0_CLF_2_R_None_photometry_DF_1.0_N_global_lstm_32x2_0.05_128_True_mean_C"
@@ -129,7 +134,7 @@ for model in list_models:
         photo_Ia = {}
         photo_nonIa = {}
 
-        for cut_type in ['bazin','clump','trigger']:
+        for cut_type in ['clump']:#['bazin','clump','trigger']:
             print()
             lu.print_blue(f'_____STATS FOR {dtype} with window {cut_type} model {Path(model).name.split("_")[0]}_____')
             print()
@@ -160,18 +165,18 @@ for model in list_models:
                     df_pred[cut_type], photo_Ia[cut_type]['all'], skim_dir, cut_type, plot=plot, model_files=model_files)
 
 
-        # get common sample of the two cut types
-        lu.print_green("common")
-        common_dir = f"./dumps/common/{dtype}"
-        Path(skim_dir).mkdir(parents=True, exist_ok=True)
-        common_SNIDs = [k for k in photo_Ia['bazin']['all'].SNID.values if int(
-            k) in photo_Ia['trigger']['all'].SNID.values.astype(int)]
-        common_photo_Ia, common_photo_nonIa = get_photo_sample_w_spec_tags(
-            df_pred['trigger'], photo_SNIDs=common_SNIDs)
+        # get common sample of the Bazin and trigger cut types
+        # lu.print_green("common")
+        # common_dir = f"./dumps/common/{dtype}"
+        # Path(skim_dir).mkdir(parents=True, exist_ok=True)
+        # common_SNIDs = [k for k in photo_Ia['bazin']['all'].SNID.values if int(
+        #     k) in photo_Ia['trigger']['all'].SNID.values.astype(int)]
+        # common_photo_Ia, common_photo_nonIa = get_photo_sample_w_spec_tags(
+        #     df_pred['trigger'], photo_SNIDs=common_SNIDs)
 
-        # venn
-        vu.plot_venn(photo_Ia['bazin']['all'], photo_Ia['trigger']['all'], 'SNID', nameout=f"{common_dir}/venn_common_sample.png")
+        # # venn
+        # vu.plot_venn(photo_Ia['bazin']['all'], photo_Ia['trigger']['all'], 'SNID', nameout=f"{common_dir}/venn_common_sample.png")
 
-        # stats for sample
-        get_sample_stats_and_plots(df_pred['trigger'], common_photo_Ia,
-                                   common_photo_nonIa, skim_dir, model_files=model_files, out_dir=common_dir, plot=plot)
+        # # stats for sample
+        # get_sample_stats_and_plots(df_pred['trigger'], common_photo_Ia,
+        #                            common_photo_nonIa, skim_dir, model_files=model_files, out_dir=common_dir, plot=plot)
