@@ -3,7 +3,7 @@
   &SNLCINP
 
      ! For SNN-integration:
-     OPT_SETPKMJD = 21
+     OPT_SETPKMJD = 533 ! clump+bazin+save fits
      SNTABLE_LIST = 'SNANA(text:csv)'
      TEXTFILE_PREFIX = 'fit_testY1'
 
